@@ -8,6 +8,14 @@ import (
 
 // Func redefines fn with newFn. An error will be returned if fn or newFn are
 // not function pointers or if their signatures do not match.
+//
+// Note that if fn has been inlined this will silently fail. If possible, add a
+// noinline directive to work-around this problem:
+//
+//	//go:noinline
+//	func myfunc() {
+//		...
+//	}
 func Func(fn, newFn any) error {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {
