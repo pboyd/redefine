@@ -6,6 +6,8 @@ import (
 	"unsafe"
 )
 
+// Func redefines fn with newFn. An error will be returned if fn or newFn are
+// not function pointers or if their signatures do not match.
 func Func(fn, newFn any) error {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {
