@@ -25,8 +25,8 @@ func Func(fn, newFn any) error {
 	if newFnv.Kind() != reflect.Func {
 		return fmt.Errorf("not a function, kind: %v", newFnv.Kind())
 	}
-	if !funcsAreEqual(fnv, newFnv) {
-		return fmt.Errorf("function signatures do not match")
+	if err := funcsAreEqual(fnv, newFnv); err != nil {
+		return fmt.Errorf("function signatures do not match: %w", err)
 	}
 
 	code, err := funcSlice(fnv)
@@ -48,29 +48,29 @@ func Func(fn, newFn any) error {
 	return insertJump(code, newFnEntry)
 }
 
-func funcsAreEqual(a, b reflect.Value) bool {
+func funcsAreEqual(a, b reflect.Value) error {
 	at := a.Type()
 	bt := b.Type()
 	if at.NumIn() != bt.NumIn() {
-		return false
+		return fmt.Errorf("arguments: %d != %d", at.NumIn(), bt.NumIn())
 	}
 	if at.NumOut() != bt.NumOut() {
-		return false
+		return fmt.Errorf("outputs: %d != %d", at.NumOut(), bt.NumOut())
 	}
 
 	for i := 0; i < at.NumIn(); i++ {
 		if at.In(i) != bt.In(i) {
-			return false
+			return fmt.Errorf("argument %d: %v != %v", i, at.In(i), bt.In(i))
 		}
 	}
 
 	for i := 0; i < at.NumOut(); i++ {
 		if at.Out(i) != bt.Out(i) {
-			return false
+			return fmt.Errorf("output %d: %v != %v", i, at.Out(i), bt.Out(i))
 		}
 	}
 
-	return true
+	return nil
 }
 
 func funcSlice(fn reflect.Value) ([]byte, error) {
