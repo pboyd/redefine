@@ -9,8 +9,9 @@ import (
 // Func redefines fn with newFn. An error will be returned if fn or newFn are
 // not function pointers or if their signatures do not match.
 //
-// Note that if fn has been inlined this will silently fail. If possible, add a
-// noinline directive to work-around this problem:
+// Note that Func only modifies non-inlined functions. Anywhere that fn has
+// been inlined it will continue with the old behavior. If possible, add a
+// noinline directive:
 //
 //	//go:noinline
 //	func myfunc() {
