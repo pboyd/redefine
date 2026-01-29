@@ -13,7 +13,7 @@ func insertJump(buf []byte, dest uintptr) error {
 	// should always be at least 32 bytes to work with, but it doesn't hurt
 	// to check.
 	if len(buf) < instructionSize {
-		return errors.New("buffer to small for jump instruction")
+		return errors.New("buffer too small for jump instruction")
 	}
 
 	// Address to jump from

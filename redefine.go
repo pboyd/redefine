@@ -98,12 +98,7 @@ func unsafeFunc(fnv, newFnv reflect.Value) error {
 	}
 	defer mprotect(code, mprotectRX)
 
-	newFnEntry := newFnv.Pointer()
-	if err != nil {
-		return err
-	}
-
-	return insertJump(code, newFnEntry)
+	return insertJump(code, newFnv.Pointer())
 }
 
 // funcSlice returns a slice containing the machine instructions for a function.
