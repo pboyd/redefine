@@ -1,7 +1,6 @@
 package redefine
 
 import (
-	"reflect"
 	"syscall"
 	"unsafe"
 )
@@ -12,8 +11,7 @@ const (
 )
 
 func mprotect(buf []byte, flags int) error {
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&buf))
-	addr := sliceHeader.Data
+	addr := uintptr(unsafe.Pointer(unsafe.SliceData(buf)))
 
 	pageSize := syscall.Getpagesize()
 

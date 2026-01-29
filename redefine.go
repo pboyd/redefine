@@ -138,10 +138,5 @@ func funcSlice(fn reflect.Value) ([]byte, error) {
 		}
 	}
 
-	var buf []byte
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&buf))
-	sliceHeader.Data = entry
-	sliceHeader.Len = int(length)
-	sliceHeader.Cap = int(length)
-	return buf, nil
+	return unsafe.Slice((*byte)(unsafe.Pointer(entry)), length), nil
 }
