@@ -26,10 +26,67 @@ func Func(fn, newFn any) error {
 	if newFnv.Kind() != reflect.Func {
 		return fmt.Errorf("not a function, kind: %v", newFnv.Kind())
 	}
-	if err := funcsAreEqual(fnv, newFnv); err != nil {
+	diff := diffFuncs(fnv, newFnv)
+	if err := diff.Error(); err != nil {
 		return fmt.Errorf("function signatures do not match: %w", err)
 	}
 
+	return unsafeFunc(fnv, newFnv)
+}
+
+// Method redefines a method of an object type. The same caveats from Func
+// apply here, with the new wrinkle that newFn must be a method on a type
+// equivalent to the original type. For example:
+//
+//	type myCustomType otherpackage.Type
+//
+// Any other type for the instance of newFn will likely lead to very
+// troublesome bugs because the code compiled for newFn will be operating on
+// the memory for the instance of fn.
+func Method(fn, newFn any) error {
+	fnv := reflect.ValueOf(fn)
+	if fnv.Kind() != reflect.Func {
+		return fmt.Errorf("not a function, kind: %v", fnv.Kind())
+	}
+	newFnv := reflect.ValueOf(newFn)
+	if newFnv.Kind() != reflect.Func {
+		return fmt.Errorf("not a function, kind: %v", newFnv.Kind())
+	}
+
+	diff := diffFuncs(fnv, newFnv)
+
+	// Ignore differences in the first argument if they are the same kind and size.
+	if len(diff.In) > 0 {
+		if diff.In[0] != nil {
+			ta := diff.In[0].A
+			tb := diff.In[0].B
+
+			if ta.Kind() == tb.Kind() {
+				// If the types are pointers then check the
+				// size of what they point to instead of the
+				// size of the pointers.
+				if ta.Kind() == reflect.Pointer {
+					ta = ta.Elem()
+					tb = tb.Elem()
+				}
+
+				if ta.Size() == tb.Size() {
+					diff.In[0] = nil
+				}
+			}
+
+		}
+	}
+
+	if err := diff.Error(); err != nil {
+		return fmt.Errorf("function signatures do not match: %w", err)
+	}
+
+	return unsafeFunc(fnv, newFnv)
+}
+
+// unsafeFunc redefines a function without the safety checks.
+func unsafeFunc(fnv, newFnv reflect.Value) error {
 	code, err := funcSlice(fnv)
 	if err != nil {
 		return err
@@ -49,31 +106,7 @@ func Func(fn, newFn any) error {
 	return insertJump(code, newFnEntry)
 }
 
-func funcsAreEqual(a, b reflect.Value) error {
-	at := a.Type()
-	bt := b.Type()
-	if at.NumIn() != bt.NumIn() {
-		return fmt.Errorf("arguments: %d != %d", at.NumIn(), bt.NumIn())
-	}
-	if at.NumOut() != bt.NumOut() {
-		return fmt.Errorf("outputs: %d != %d", at.NumOut(), bt.NumOut())
-	}
-
-	for i := 0; i < at.NumIn(); i++ {
-		if at.In(i) != bt.In(i) {
-			return fmt.Errorf("argument %d: %v != %v", i, at.In(i), bt.In(i))
-		}
-	}
-
-	for i := 0; i < at.NumOut(); i++ {
-		if at.Out(i) != bt.Out(i) {
-			return fmt.Errorf("output %d: %v != %v", i, at.Out(i), bt.Out(i))
-		}
-	}
-
-	return nil
-}
-
+// funcSlice returns a slice containing the machine instructions for a function.
 func funcSlice(fn reflect.Value) ([]byte, error) {
 	if fn.Kind() != reflect.Func {
 		return nil, fmt.Errorf("not a function, kind: %v", fn.Kind())

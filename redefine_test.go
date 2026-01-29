@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //go:noinline
@@ -57,33 +58,49 @@ func TestFunc_SignatureMismatch(t *testing.T) {
 	t.Run("different number of inputs", func(t *testing.T) {
 		fn1 := func(x int) int { return x }
 		fn2 := func(x, y int) int { return x + y }
+
 		err := Func(fn1, fn2)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "signatures do not match")
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "signatures do not match")
+		}
+
+		err = Func(fn2, fn1)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "signatures do not match")
+		}
 	})
 
 	t.Run("different number of outputs", func(t *testing.T) {
 		fn1 := func() int { return 1 }
 		fn2 := func() (int, error) { return 1, nil }
+
 		err := Func(fn1, fn2)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "signatures do not match")
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "signatures do not match")
+		}
+
+		err = Func(fn2, fn1)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "signatures do not match")
+		}
 	})
 
 	t.Run("different input types", func(t *testing.T) {
 		fn1 := func(x int) int { return x }
 		fn2 := func(x string) int { return len(x) }
 		err := Func(fn1, fn2)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "signatures do not match")
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "signatures do not match")
+		}
 	})
 
 	t.Run("different output types", func(t *testing.T) {
 		fn1 := func() int { return 1 }
 		fn2 := func() string { return "1" }
 		err := Func(fn1, fn2)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "signatures do not match")
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "signatures do not match")
+		}
 	})
 }
 
@@ -258,4 +275,91 @@ func TestFunc_StructArgs(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 105, withStructArg(s))
+}
+
+type testStruct struct {
+	Num int
+}
+
+//go:noinline
+func (ts *testStruct) Inc() {
+	ts.Num++
+}
+
+type testStruct2 testStruct
+
+func (ts *testStruct2) Double() {
+	ts.Num *= 2
+}
+
+func (ts testStruct2) BadInc() {
+	// Non-pointer type, so this won't work.
+	ts.Num++
+}
+
+type testStruct3 struct {
+	testStruct
+	Other int
+}
+
+func (ts *testStruct3) Inc() {
+	ts.Num++
+	ts.Other++
+}
+
+func TestMethod(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	ts := &testStruct{}
+	ts.Inc()
+	ts.Inc()
+	assert.Equal(2, ts.Num)
+
+	require.NoError(Method((*testStruct).Inc, (*testStruct2).Double))
+
+	ts.Inc()
+	assert.Equal(4, ts.Num)
+
+	ts.Inc()
+	assert.Equal(8, ts.Num)
+}
+
+func TestMethod_DifferentTypeSizes(t *testing.T) {
+	assert := assert.New(t)
+
+	// A pointer to a testStruct is the same size as a testStruct2, but
+	// this call should fail because the kinds are different:
+	assert.Error(Method((*testStruct).Inc, (testStruct2).BadInc))
+
+	// Ensure that Method checks the size of the pointer destination, not
+	// the size of the pointer.
+	assert.Error(Method((*testStruct).Inc, (*testStruct3).Inc))
+}
+
+type testStruct4 struct {
+	A uint32
+	B uint32
+}
+
+func (ts *testStruct4) Inc() {
+	ts.A++
+	ts.B++
+}
+
+func TestMethod_DifferentTypes(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	// This is to demonstrate the effect of not using an equivalent type
+	// for redefined methods. The size of testStruct and testStruct4 are
+	// the same but the fields are different. So the code compiled for
+	// testStruct4 operates on the memory of testStruct and things get
+	// weird. It works OK in this test, but in general expect crashes and
+	// weird bugs.
+
+	ts := &testStruct{}
+	require.NoError(Method((*testStruct).Inc, (*testStruct4).Inc))
+	ts.Inc()
+	assert.Equal(1<<32|1, ts.Num)
 }
