@@ -1,6 +1,7 @@
 package redefine
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -362,4 +363,122 @@ func TestMethod_DifferentTypes(t *testing.T) {
 	require.NoError(Method((*testStruct).Inc, (*testStruct4).Inc))
 	ts.Inc()
 	assert.Equal(1<<32|1, ts.Num)
+}
+
+//go:noinline
+func variadicSum(nums ...int) int {
+	sum := 0
+	for _, n := range nums {
+		sum += n
+	}
+	return sum
+}
+
+func variadicSumReplacement(nums ...int) int {
+	// Returns the product instead
+	product := 1
+	for _, n := range nums {
+		product *= n
+	}
+	return product
+}
+
+func TestFunc_Variadic(t *testing.T) {
+	t.Run("basic variadic", func(t *testing.T) {
+		assert.Equal(t, 15, variadicSum(1, 2, 3, 4, 5))
+
+		err := Func(variadicSum, variadicSumReplacement)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 120, variadicSum(1, 2, 3, 4, 5))
+	})
+}
+
+//go:noinline
+func variadicWithPrefix(prefix string, vals ...int) string {
+	result := prefix + ":"
+	for i, v := range vals {
+		if i > 0 {
+			result += ","
+		}
+		result += string(rune('0' + v))
+	}
+	return result
+}
+
+func variadicWithPrefixReplacement(prefix string, vals ...int) string {
+	return "replaced"
+}
+
+func TestFunc_VariadicWithOtherArgs(t *testing.T) {
+	assert.Equal(t, "test:1,2,3", variadicWithPrefix("test", 1, 2, 3))
+
+	err := Func(variadicWithPrefix, variadicWithPrefixReplacement)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "replaced", variadicWithPrefix("test", 1, 2, 3))
+}
+
+//go:noinline
+func variadicEmpty(vals ...int) int {
+	return len(vals)
+}
+
+func variadicEmptyReplacement(vals ...int) int {
+	return -1
+}
+
+func TestFunc_VariadicEmpty(t *testing.T) {
+	// Test with no arguments
+	assert.Equal(t, 0, variadicEmpty())
+
+	err := Func(variadicEmpty, variadicEmptyReplacement)
+	assert.NoError(t, err)
+
+	assert.Equal(t, -1, variadicEmpty())
+}
+
+//go:noinline
+func genericToString[T any](val T) string {
+	return fmt.Sprintf("%v", val)
+}
+
+func genericToStringReplacement[T any](val T) string {
+	return fmt.Sprintf("replaced: %v", val)
+}
+
+type myType struct {
+	X int
+}
+
+func TestFunc_Generics(t *testing.T) {
+	t.Skipf("these currently fail")
+
+	t.Run("generic instantiated with int", func(t *testing.T) {
+		assert.Equal(t, "42", genericToString(42))
+
+		err := Func(genericToString[int], genericToStringReplacement[int])
+		assert.NoError(t, err)
+
+		assert.Equal(t, "replaced: 42", genericToString(42))
+	})
+
+	t.Run("generic instantiated with string", func(t *testing.T) {
+		assert.Equal(t, "hello", genericToString("hello"))
+
+		err := Func(genericToString[string], genericToStringReplacement[string])
+		assert.NoError(t, err)
+
+		assert.Equal(t, "replaced: hello", genericToString("hello"))
+	})
+
+	t.Run("generic instantiated with custom type", func(t *testing.T) {
+		instance := myType{X: 1}
+		assert.Equal(t, "42", genericToString(instance))
+
+		err := Func(genericToString[myType], genericToStringReplacement[myType])
+		assert.NoError(t, err)
+
+		assert.Equal(t, "replaced: 42", genericToString(instance))
+	})
 }

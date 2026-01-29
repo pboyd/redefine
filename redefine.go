@@ -17,6 +17,8 @@ import (
 //	func myfunc() {
 //		...
 //	}
+//
+// Generic functions cannot currently be redefined.
 func Func(fn, newFn any) error {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {

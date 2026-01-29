@@ -4,11 +4,12 @@
 // languages allow (Ruby being a prominent example). It turns out to be
 // possible and this package is the proof-of-concept. You shouldn't use this.
 //
-// Currently limitations:
+// Limitations:
 //   - Only compiles on linux/amd64
 //   - Once redefined, the original function is lost
 //   - Relies on internal Go APIs that can break at any time
 //   - Silently fails to redefine inline functions
+//   - Silently fails to redefine generic functions
 //   - Probably some bugs I don't know about.
 //
 // Did I mention you shouldn't use this?
