@@ -25,11 +25,17 @@ func mprotect(buf []byte, flags int) error {
 	totalBytes := offsetWithinPage + cap(buf)
 
 	// Round up to cover complete pages.
-	pageCount := (totalBytes + pageSize - 1) / pageSize
-	regionSize := pageCount * pageSize
+	regionSize := (totalBytes + pageSize - 1) / pageSize * pageSize
 
 	// Convert the memory region to a byte slice for mprotect.
 	region := unsafe.Slice((*byte)(unsafe.Pointer(pageStart)), regionSize)
 
 	return syscall.Mprotect(region, flags)
+}
+
+func mmap(size int, prot int) ([]byte, error) {
+	pageSize := syscall.Getpagesize()
+	size = (size + pageSize - 1) / pageSize * pageSize
+
+	return syscall.Mmap(-1, 0, size, prot, syscall.MAP_PRIVATE|syscall.MAP_ANON)
 }
