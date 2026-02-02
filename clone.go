@@ -10,6 +10,50 @@ import (
 	"github.com/pboyd/malloc"
 )
 
+// CloneFunc makes a copy of a function.
+func CloneFunc[T any](fn T) (*ClonedFunc[T], error) {
+	fnv := reflect.ValueOf(fn)
+	if fnv.Kind() != reflect.Func {
+		return nil, fmt.Errorf("not a function, kind: %v", fnv.Kind())
+	}
+
+	originalCode, err := funcSlice(fnv)
+	if err != nil {
+		return nil, err
+	}
+
+	//fmt.Println(disassemble(originalCode))
+
+	// FIXME: It would be nice if relocateFunc could write directly to the
+	// buffer from the allocator. But the allocator needs a fixed size and
+	// don't know it early enough.
+	relocatableCode, err := relocateFunc(originalCode)
+	if err != nil {
+		return nil, err
+	}
+
+	newCode, err := cloneAllocator.Allocate(len(relocatableCode))
+	if err != nil {
+		return nil, err
+	}
+	copy(newCode, relocatableCode)
+
+	//fmt.Println(disassemble(newCode))
+
+	// This seems too complicated. The idea is to take our newly allocated
+	// buffer of machine instructions and convince Go that it's really a
+	// function pointer of type T.
+	codeData := unsafe.SliceData(newCode)
+	cf := ClonedFunc[T]{
+		code: newCode,
+		// Keep a reference to codeData so it stays around.
+		ref: &codeData,
+	}
+	cf.Func = *(*T)(unsafe.Pointer(uintptr(unsafe.Pointer(&cf.ref))))
+
+	return &cf, nil
+}
+
 type allocator struct {
 	*malloc.Arena
 	mu       sync.Mutex
@@ -58,6 +102,9 @@ var cloneAllocator = &allocator{}
 // ClonedFunc holds a copy of a function.
 type ClonedFunc[T any] struct {
 	Func T
+
+	// The data for this slice is allocated in the mmap page and managed by
+	// allocator. Keep a reference in order to free it.
 	code []byte
 	ref  **byte
 }
@@ -69,36 +116,4 @@ func (cf *ClonedFunc[T]) Free() {
 	cf.code = nil
 	*cf.ref = nil
 	cf.ref = nil
-}
-
-// CloneFunc makes a copy of a function.
-func CloneFunc[T any](fn T) (*ClonedFunc[T], error) {
-	fnv := reflect.ValueOf(fn)
-	if fnv.Kind() != reflect.Func {
-		return nil, fmt.Errorf("not a function, kind: %v", fnv.Kind())
-	}
-
-	code, err := funcSlice(fnv)
-	if err != nil {
-		return nil, err
-	}
-
-	newCode, err := cloneAllocator.Allocate(len(code))
-	if err != nil {
-		return nil, err
-	}
-	copy(newCode, code)
-
-	// This seems too complicated. The idea is to take our newly allocated
-	// buffer of machine instructions and convince Go that it's really a
-	// function pointer of type T.
-	codeData := unsafe.SliceData(newCode)
-	cf := ClonedFunc[T]{
-		code: newCode,
-		// Keep a reference to codeData so it stays around.
-		ref: &codeData,
-	}
-	cf.Func = *(*T)(unsafe.Pointer(uintptr(unsafe.Pointer(&cf.ref))))
-
-	return &cf, nil
 }
