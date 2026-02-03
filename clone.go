@@ -24,19 +24,17 @@ func CloneFunc[T any](fn T) (*ClonedFunc[T], error) {
 
 	//fmt.Println(disassemble(originalCode))
 
-	// FIXME: It would be nice if relocateFunc could write directly to the
-	// buffer from the allocator. But the allocator needs a fixed size and
-	// don't know it early enough.
-	relocatableCode, err := relocateFunc(originalCode)
+	newCode, err := cloneAllocator.Allocate(len(originalCode) * 2)
 	if err != nil {
 		return nil, err
 	}
 
-	newCode, err := cloneAllocator.Allocate(len(relocatableCode))
+	newCode, err = relocateFunc(originalCode, newCode)
 	if err != nil {
 		return nil, err
 	}
-	copy(newCode, relocatableCode)
+
+	newCode = cloneAllocator.Shrink(newCode)
 
 	//fmt.Println(disassemble(newCode))
 
@@ -90,11 +88,18 @@ func (a *allocator) Allocate(size int) ([]byte, error) {
 	return malloc.MallocSlice[byte](a.Arena, size)
 }
 
+func (a *allocator) Shrink(buf []byte) []byte {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	return malloc.ShrinkSlice(a.Arena, buf)
+}
+
 func (a *allocator) Free(buf []byte) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	malloc.FreeSlice[byte](a.Arena, buf)
+	malloc.FreeSlice(a.Arena, buf)
 }
 
 var cloneAllocator = &allocator{}

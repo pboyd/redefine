@@ -6,13 +6,10 @@ import (
 	"io"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func simpleTestCloneFunc(v uint8) uint16 {
-	return uint16(v)<<8 | uint16(v)
-}
 
 func testCloneFuncWithLotsOfCalls(v int) string {
 	// Just need to make a lot of function calls
@@ -22,53 +19,85 @@ func testCloneFuncWithLotsOfCalls(v int) string {
 	return hex.EncodeToString(buf)
 }
 
-func testCloneFuncWithData() string {
-	// FIXME: Use another value.
-	return ""
+func TestClone(t *testing.T) {
+	assert := assert.New(t)
+
+	result := testCloneFuncWithLotsOfCalls(25)
+	cf, err := CloneFunc(testCloneFuncWithLotsOfCalls)
+	if assert.NoError(err) && assert.NotNil(cf) {
+		t.Cleanup(cf.Free)
+		assert.Equal(result, cf.Func(25))
+
+		assert.True(cloneAllocator.Contains(cf.Func))
+	}
 }
 
-func TestClone(t *testing.T) {
-	t.Run("clone a simple function", func(t *testing.T) {
-		assert := assert.New(t)
+func simpleTestCloneFunc(v uint8) uint16 {
+	return uint16(v)<<8 | uint16(v)
+}
 
-		result := simpleTestCloneFunc(0xf)
-		cf, err := CloneFunc(simpleTestCloneFunc)
-		if assert.NoError(err) && assert.NotNil(cf) {
-			t.Cleanup(cf.Free)
-			assert.Equal(result, cf.Func(0xf))
+func testCloneFuncWithOneCall(v int) string {
+	return strconv.Itoa(v + 1)
+}
 
-			// Verify that the returned function exists in the
-			// cloneAllocator's memory
-			assert.True(cloneAllocator.Contains(cf.Func))
-		}
-	})
+func testCloneFuncWithData() string {
+	return "something static"
+}
 
-	t.Run("clone a function with hard-coded data", func(t *testing.T) {
-		assert := assert.New(t)
+func TestClone_VariousFunctions(t *testing.T) {
+	cases := map[string]struct {
+		call         func() any
+		cloneAndCall func(t *testing.T) (any, error)
+	}{
+		"simple function": {
+			call: func() any {
+				return simpleTestCloneFunc(0xf)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(simpleTestCloneFunc)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func(0xf), nil
+			},
+		},
+		"function with static data": {
+			call: func() any {
+				return testCloneFuncWithData()
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(testCloneFuncWithData)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func(), nil
+			},
+		},
+		"time.Now": {
+			call: func() any {
+				return time.Now().Truncate(time.Hour)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(time.Now)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func().Truncate(time.Hour), nil
+			},
+		},
+	}
 
-		result := testCloneFuncWithData()
-		cf, err := CloneFunc(testCloneFuncWithData)
-		if assert.NoError(err) && assert.NotNil(cf) {
-			t.Cleanup(cf.Free)
-			assert.Equal(result, cf.Func())
-		}
-	})
-
-	/*
-		// FIXME: Panics hard right now
-		t.Run("clone a function with CALL instructions", func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			assert := assert.New(t)
 
-			result := testCloneFuncWithLotsOfCalls(25)
-			cf, err := CloneFunc(testCloneFuncWithLotsOfCalls)
-			if assert.NoError(err) && assert.NotNil(cf) {
-				t.Cleanup(cf.Free)
-				assert.Equal(result, cf.Func(25))
-
-				// Verify that the returned function exists in the
-				// cloneAllocator's memory
-				assert.True(cloneAllocator.Contains(cf.Func))
+			actual, err := tc.cloneAndCall(t)
+			if assert.NoError(err) {
+				assert.Equal(tc.call(), actual)
 			}
 		})
-	*/
+	}
 }
