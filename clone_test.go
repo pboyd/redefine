@@ -1,10 +1,14 @@
 package redefine
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"hash/fnv"
 	"io"
+	"math"
+	"sort"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -109,7 +113,7 @@ func testCloneFuncComplex128(c complex128) complex128 {
 }
 
 func testCloneFuncInt64(a int64, b int64) int64 {
-	return a << 32 | b
+	return a<<32 | b
 }
 
 func testCloneFuncNested(x int) int {
@@ -148,19 +152,6 @@ func TestClone_VariousFunctions(t *testing.T) {
 				}
 				defer cf.Free()
 				return cf.Func(), nil
-			},
-		},
-		"time.Now": {
-			call: func() any {
-				return time.Now().Truncate(time.Hour)
-			},
-			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(time.Now)
-				if err != nil {
-					return nil, err
-				}
-				defer cf.Free()
-				return cf.Func().Truncate(time.Hour), nil
 			},
 		},
 		"function with one call": {
@@ -441,6 +432,219 @@ func TestClone_VariousFunctions(t *testing.T) {
 				return cf.Func(5), nil
 			},
 		},
+		"time.Now": {
+			call: func() any {
+				return time.Now().Truncate(time.Hour)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(time.Now)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func().Truncate(time.Hour), nil
+			},
+		},
+		"math.Sqrt": {
+			call: func() any {
+				return math.Sqrt(16.0)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(math.Sqrt)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func(16.0), nil
+			},
+		},
+		"math.Sin": {
+			call: func() any {
+				return math.Sin(math.Pi / 2)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(math.Sin)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func(math.Pi / 2), nil
+			},
+		},
+		"math.Pow": {
+			call: func() any {
+				return math.Pow(2.0, 8.0)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(math.Pow)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func(2.0, 8.0), nil
+			},
+		},
+		"math.Max": {
+			call: func() any {
+				return math.Max(42.5, 17.3)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(math.Max)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func(42.5, 17.3), nil
+			},
+		},
+		"strings.ToUpper": {
+			call: func() any {
+				return strings.ToUpper("hello world")
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(strings.ToUpper)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func("hello world"), nil
+			},
+		},
+		"strings.Contains": {
+			call: func() any {
+				return strings.Contains("hello world", "world")
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(strings.Contains)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func("hello world", "world"), nil
+			},
+		},
+		"strings.HasPrefix": {
+			call: func() any {
+				return strings.HasPrefix("prefix-test", "prefix")
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(strings.HasPrefix)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func("prefix-test", "prefix"), nil
+			},
+		},
+		"strings.Join": {
+			call: func() any {
+				return strings.Join([]string{"a", "b", "c"}, ",")
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(strings.Join)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func([]string{"a", "b", "c"}, ","), nil
+			},
+		},
+		"strconv.Atoi": {
+			call: func() any {
+				v, e := strconv.Atoi("12345")
+				return struct {
+					val int
+					err error
+				}{v, e}
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(strconv.Atoi)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				v, e := cf.Func("12345")
+				return struct {
+					val int
+					err error
+				}{v, e}, nil
+			},
+		},
+		"strconv.FormatInt": {
+			call: func() any {
+				return strconv.FormatInt(255, 16)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(strconv.FormatInt)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func(255, 16), nil
+			},
+		},
+		"sort.Ints": {
+			call: func() any {
+				data := []int{5, 2, 8, 1, 9}
+				sort.Ints(data)
+				return data
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(sort.Ints)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				data := []int{5, 2, 8, 1, 9}
+				cf.Func(data)
+				return data, nil
+			},
+		},
+		"sort.Strings": {
+			call: func() any {
+				data := []string{"zebra", "apple", "mango", "banana"}
+				sort.Strings(data)
+				return data
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(sort.Strings)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				data := []string{"zebra", "apple", "mango", "banana"}
+				cf.Func(data)
+				return data, nil
+			},
+		},
+		"time.Since": {
+			call: func() any {
+				past := time.Now().Add(-1 * time.Hour)
+				return time.Since(past).Truncate(time.Hour)
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(time.Since)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				past := time.Now().Add(-1 * time.Hour)
+				return cf.Func(past).Truncate(time.Hour), nil
+			},
+		},
+		"time.Unix": {
+			call: func() any {
+				return time.Unix(1234567890, 0).UTC()
+			},
+			cloneAndCall: func(t *testing.T) (any, error) {
+				cf, err := CloneFunc(time.Unix)
+				if err != nil {
+					return nil, err
+				}
+				defer cf.Free()
+				return cf.Func(1234567890, 0).UTC(), nil
+			},
+		},
 	}
 
 	for name, tc := range cases {
@@ -453,4 +657,19 @@ func TestClone_VariousFunctions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCloneFunc_Method(t *testing.T) {
+	t.Skip("cloning methods does not work")
+
+	assert := assert.New(t)
+	expected := base64.StdEncoding.EncodeToString([]byte("test data"))
+
+	cf, err := CloneFunc(base64.StdEncoding.EncodeToString)
+	if !assert.NoError(err) {
+		return
+	}
+
+	defer cf.Free()
+	assert.Equal(expected, cf.Func([]byte("test data")))
 }

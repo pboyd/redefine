@@ -10,7 +10,11 @@ import (
 	"github.com/pboyd/malloc"
 )
 
-// CloneFunc makes a copy of a function.
+// CloneFunc makes a copy of a function that persists after the original
+// function has been modified.
+//
+// Note that this only works for functions. Methods can be cloned, but will
+// panic when called.
 func CloneFunc[T any](fn T) (*ClonedFunc[T], error) {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {
@@ -24,7 +28,7 @@ func CloneFunc[T any](fn T) (*ClonedFunc[T], error) {
 
 	//fmt.Println(disassemble(originalCode))
 
-	newCode, err := cloneAllocator.Allocate(len(originalCode) * 2)
+	newCode, err := cloneAllocator.Allocate(len(originalCode))
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +37,6 @@ func CloneFunc[T any](fn T) (*ClonedFunc[T], error) {
 	if err != nil {
 		return nil, err
 	}
-
-	newCode = cloneAllocator.Shrink(newCode)
 
 	//fmt.Println(disassemble(newCode))
 
@@ -86,13 +88,6 @@ func (a *allocator) Allocate(size int) ([]byte, error) {
 	}
 
 	return malloc.MallocSlice[byte](a.Arena, size)
-}
-
-func (a *allocator) Shrink(buf []byte) []byte {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	return malloc.ShrinkSlice(a.Arena, buf)
 }
 
 func (a *allocator) Free(buf []byte) {
