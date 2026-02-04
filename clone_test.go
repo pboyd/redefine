@@ -23,7 +23,7 @@ func testCloneFuncWithLotsOfCalls(v int) string {
 	return hex.EncodeToString(buf)
 }
 
-func TestClone(t *testing.T) {
+func TestCloneFunc(t *testing.T) {
 	assert := assert.New(t)
 
 	result := testCloneFuncWithLotsOfCalls(25)
@@ -123,7 +123,7 @@ func testCloneFuncNested(x int) int {
 	return helper(x) + 1
 }
 
-func TestClone_VariousFunctions(t *testing.T) {
+func TestCloneFunc_VariousFunctions(t *testing.T) {
 	cases := map[string]struct {
 		call         func() any
 		cloneAndCall func(t *testing.T) (any, error)
