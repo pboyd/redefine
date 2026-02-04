@@ -27,19 +27,13 @@ func TestFunc(t *testing.T) {
 
 func TestFunc_NotAFunction(t *testing.T) {
 	t.Run("first arg not a function", func(t *testing.T) {
-		err := Func("not a function", b)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not a function")
-	})
-
-	t.Run("second arg not a function", func(t *testing.T) {
-		err := Func(a, 42)
+		err := Func("not a function", "not a function")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "not a function")
 	})
 
 	t.Run("both args not functions", func(t *testing.T) {
-		err := Func([]int{1, 2, 3}, map[string]int{})
+		err := Func([]int{1, 2, 3}, []int{})
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "not a function")
 	})
@@ -52,56 +46,6 @@ func TestFunc_NotAFunction(t *testing.T) {
 	t.Run("nil second arg", func(t *testing.T) {
 		err := Func(a, nil)
 		assert.Error(t, err)
-	})
-}
-
-func TestFunc_SignatureMismatch(t *testing.T) {
-	t.Run("different number of inputs", func(t *testing.T) {
-		fn1 := func(x int) int { return x }
-		fn2 := func(x, y int) int { return x + y }
-
-		err := Func(fn1, fn2)
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "signatures do not match")
-		}
-
-		err = Func(fn2, fn1)
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "signatures do not match")
-		}
-	})
-
-	t.Run("different number of outputs", func(t *testing.T) {
-		fn1 := func() int { return 1 }
-		fn2 := func() (int, error) { return 1, nil }
-
-		err := Func(fn1, fn2)
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "signatures do not match")
-		}
-
-		err = Func(fn2, fn1)
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "signatures do not match")
-		}
-	})
-
-	t.Run("different input types", func(t *testing.T) {
-		fn1 := func(x int) int { return x }
-		fn2 := func(x string) int { return len(x) }
-		err := Func(fn1, fn2)
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "signatures do not match")
-		}
-	})
-
-	t.Run("different output types", func(t *testing.T) {
-		fn1 := func() int { return 1 }
-		fn2 := func() string { return "1" }
-		err := Func(fn1, fn2)
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "signatures do not match")
-		}
 	})
 }
 

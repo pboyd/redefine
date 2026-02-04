@@ -7,7 +7,7 @@ import (
 )
 
 // Func redefines fn with newFn. An error will be returned if fn or newFn are
-// not function pointers or if their signatures do not match.
+// not function pointers.
 //
 // Note that Func only modifies non-inlined functions. Anywhere that fn has
 // been inlined will continue with the old behavior. If possible, add a
@@ -22,26 +22,22 @@ import (
 //   - Generic functions cannot be redefined
 //   - newFn cannot be a closure (anonymous functions are fine, but it will crash
 //     if you attempt to use data from the stack)
-func Func(fn, newFn any) error {
+func Func[T any](fn, newFn T) error {
 	fnv := reflect.ValueOf(fn)
-	if fnv.Kind() != reflect.Func {
+	if fnv.Kind() != reflect.Func || fnv.IsNil() {
 		return fmt.Errorf("not a function, kind: %v", fnv.Kind())
 	}
 	newFnv := reflect.ValueOf(newFn)
-	if newFnv.Kind() != reflect.Func {
+	if newFnv.Kind() != reflect.Func || newFnv.IsNil() {
 		return fmt.Errorf("not a function, kind: %v", newFnv.Kind())
-	}
-	diff := diffFuncs(fnv, newFnv)
-	if err := diff.Error(); err != nil {
-		return fmt.Errorf("function signatures do not match: %w", err)
 	}
 
 	return unsafeFunc(fnv, newFnv)
 }
 
-// Method redefines a method of an object type. The same caveats from Func
-// apply here, with the new wrinkle that newFn must be a method on a type
-// equivalent to the original type. For example:
+// Method redefines a method of an object. The same caveats from Func apply
+// here, with the new wrinkle that newFn must be a method on a type equivalent
+// to the original type. For example:
 //
 //	type myCustomType otherpackage.Type
 //
