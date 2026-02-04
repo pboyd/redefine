@@ -10,7 +10,7 @@ import (
 // not function pointers or if their signatures do not match.
 //
 // Note that Func only modifies non-inlined functions. Anywhere that fn has
-// been inlined it will continue with the old behavior. If possible, add a
+// been inlined will continue with the old behavior. If possible, add a
 // noinline directive:
 //
 //	//go:noinline
@@ -18,7 +18,10 @@ import (
 //		...
 //	}
 //
-// Generic functions cannot currently be redefined.
+// Other limitations that might be addressed one day:
+//   - Generic functions cannot be redefined
+//   - newFn cannot be a closure (anonymous functions are fine, but it will crash
+//     if you attempt to use data from the stack)
 func Func(fn, newFn any) error {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {

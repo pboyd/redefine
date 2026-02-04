@@ -452,7 +452,7 @@ type myType struct {
 }
 
 func TestFunc_Generics(t *testing.T) {
-	t.Skipf("these currently fail")
+	t.Skipf("generic functions are unsupported")
 
 	t.Run("generic instantiated with int", func(t *testing.T) {
 		assert.Equal(t, "42", genericToString(42))
@@ -480,5 +480,50 @@ func TestFunc_Generics(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "replaced: 42", genericToString(instance))
+	})
+}
+
+//go:noinline
+func closureTestFunc() int {
+	return 0
+}
+
+var closureTestFuncVar int
+
+func TestFunc_Closure(t *testing.T) {
+
+	t.Run("closure", func(t *testing.T) {
+		t.Skipf("functions that enclose data are unsupported")
+
+		// The anonymous function below is:
+		//
+		// 488b4a08                MOVQ 0x8(DX), CX
+		// 488b01                  MOVQ 0(CX), AX
+		// 48ffc0                  INCQ AX
+		// 488901                  MOVQ AX, 0(CX)
+		// c3                      RET
+		//
+		// When called with our JMP it panics on the first instruction
+		// because DX wasn't initialized correctly.
+
+		i := 0
+		Func(closureTestFunc, func() int {
+			i++
+			return i
+		})
+		assert.Equal(t, 1, closureTestFunc())
+		assert.Equal(t, 2, closureTestFunc())
+		assert.Equal(t, 3, closureTestFunc())
+	})
+
+	t.Run("static data", func(t *testing.T) {
+		// Anonymous functions using static data are fine.
+		Func(closureTestFunc, func() int {
+			closureTestFuncVar++
+			return closureTestFuncVar
+		})
+		assert.Equal(t, 1, closureTestFunc())
+		assert.Equal(t, 2, closureTestFunc())
+		assert.Equal(t, 3, closureTestFunc())
 	})
 }
