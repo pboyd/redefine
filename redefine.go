@@ -147,7 +147,7 @@ func Restore[T any](fn T) error {
 		return err
 	}
 	if len(code) != len(clonedType.originalCode) {
-		fmt.Errorf("func length mismatch %d != %d", len(code), len(clonedType.originalCode))
+		return fmt.Errorf("func length mismatch %d != %d", len(code), len(clonedType.originalCode))
 	}
 
 	err = mprotect(code, mprotectRWX)

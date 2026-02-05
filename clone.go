@@ -12,9 +12,6 @@ import (
 
 // cloneFunc makes a copy of a function that persists after the original
 // function has been modified.
-//
-// Note that this only works for functions. Methods can be cloned, but will
-// panic when called.
 func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {

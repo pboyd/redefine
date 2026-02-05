@@ -89,6 +89,7 @@ func fixPCRelAddress(inst x86asm.Inst, src, dest []byte) error {
 
 		binary.LittleEndian.PutUint32(dest[inst.PCRelOff:], uint32(newDisp))
 	case 1:
+		// Ignore 1-byte relative addresses because their most likely jumps inside the function.
 	default:
 		return fmt.Errorf("unsupported relative address size: %d", inst.PCRel)
 	}
