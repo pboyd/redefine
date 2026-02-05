@@ -2,6 +2,7 @@ package redefine_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"time"
@@ -13,6 +14,7 @@ func ExampleFunc() {
 	redefine.Func(time.Now, func() time.Time {
 		return time.Date(2000, 1, 1, 17, 0, 0, 0, time.FixedZone("somewhere", -5))
 	})
+	defer redefine.Restore(time.Now)
 
 	fmt.Printf("It's %s\n", time.Now().Format("3:04 PM MST"))
 	// Output: It's 5:00 PM somewhere
@@ -26,8 +28,30 @@ func (*myResolver) LookupHost(context.Context, string) ([]string, error) {
 
 func ExampleMethod() {
 	redefine.Method((*net.Resolver).LookupHost, (*myResolver).LookupHost)
+	defer redefine.Restore((*net.Resolver).LookupHost)
 
 	addrs, _ := net.DefaultResolver.LookupHost(context.Background(), "www.google.com")
 	fmt.Printf("www.google.com has addresses %v", addrs)
 	// Output: www.google.com has addresses [127.0.0.1]
+}
+
+func ExampleOriginal() {
+	redefine.Func(json.Marshal, func(v any) ([]byte, error) {
+		// Pass strings through
+		if _, ok := v.(string); ok {
+			return redefine.Original(json.Marshal)(v)
+		}
+
+		return []byte(`{"nah": true}`), nil
+	})
+	defer redefine.Restore(json.Marshal)
+
+	buf, _ := json.Marshal("A string")
+	fmt.Println(string(buf))
+
+	buf, _ = json.Marshal(123)
+	fmt.Println(string(buf))
+	// Output:
+	// "A string"
+	// {"nah": true}
 }

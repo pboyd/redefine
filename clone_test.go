@@ -1,7 +1,6 @@
 package redefine
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"hash/fnv"
 	"io"
@@ -657,19 +656,4 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestCloneFunc_Method(t *testing.T) {
-	t.Skip("cloning methods does not work")
-
-	assert := assert.New(t)
-	expected := base64.StdEncoding.EncodeToString([]byte("test data"))
-
-	cf, err := cloneFunc(base64.StdEncoding.EncodeToString)
-	if !assert.NoError(err) {
-		return
-	}
-
-	defer cf.Free()
-	assert.Equal(expected, cf.Func([]byte("test data")))
 }

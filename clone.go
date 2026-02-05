@@ -122,4 +122,5 @@ func (cf *clonedFunc[T]) Free() {
 	cf.clonedCode = nil
 	*cf.ref = nil
 	cf.ref = nil
+	cf.originalCode = nil
 }

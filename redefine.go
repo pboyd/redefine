@@ -49,7 +49,7 @@ func Func[T any](fn, newFn T) error {
 // Any other type for the instance of newFn will likely lead to very
 // troublesome bugs because the code compiled for newFn will be operating on
 // the memory for the instance of fn.
-func Method(fn, newFn any) error {
+func Method[T1, T2 any](fn T1, newFn T2) error {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {
 		return fmt.Errorf("not a function, kind: %v", fnv.Kind())
@@ -88,7 +88,7 @@ func Method(fn, newFn any) error {
 		return fmt.Errorf("function signatures do not match: %w", err)
 	}
 
-	return unsafeFunc(fnv.Interface(), newFnv.Interface())
+	return unsafeFunc(fn, newFn)
 }
 
 // Original returns a function with the same behavior as the original version
@@ -139,7 +139,7 @@ func Restore[T any](fn T) error {
 
 	clonedType, ok := cloned.(*clonedFunc[T])
 	if !ok {
-		return fmt.Errorf("unknown function type")
+		return fmt.Errorf("unknown function type: %T", cloned)
 	}
 
 	code, err := funcSlice(fn)
@@ -165,7 +165,7 @@ func Restore[T any](fn T) error {
 }
 
 // unsafeFunc redefines a function after the safety checks.
-func unsafeFunc[T any](fn, newFn T) error {
+func unsafeFunc[T any](fn T, newFn any) error {
 	code, err := funcSlice(fn)
 	if err != nil {
 		return err
