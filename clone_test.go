@@ -27,7 +27,7 @@ func TestCloneFunc(t *testing.T) {
 	assert := assert.New(t)
 
 	result := testCloneFuncWithLotsOfCalls(25)
-	cf, err := CloneFunc(testCloneFuncWithLotsOfCalls)
+	cf, err := cloneFunc(testCloneFuncWithLotsOfCalls)
 	if assert.NoError(err) && assert.NotNil(cf) {
 		t.Cleanup(cf.Free)
 		assert.Equal(result, cf.Func(25))
@@ -133,7 +133,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return simpleTestCloneFunc(0xf)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(simpleTestCloneFunc)
+				cf, err := cloneFunc(simpleTestCloneFunc)
 				if err != nil {
 					return nil, err
 				}
@@ -146,7 +146,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithData()
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithData)
+				cf, err := cloneFunc(testCloneFuncWithData)
 				if err != nil {
 					return nil, err
 				}
@@ -159,7 +159,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithOneCall(42)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithOneCall)
+				cf, err := cloneFunc(testCloneFuncWithOneCall)
 				if err != nil {
 					return nil, err
 				}
@@ -172,7 +172,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncMultipleParams(10, 32)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncMultipleParams)
+				cf, err := cloneFunc(testCloneFuncMultipleParams)
 				if err != nil {
 					return nil, err
 				}
@@ -189,7 +189,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				}{v, e}
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncMultipleReturns)
+				cf, err := cloneFunc(testCloneFuncMultipleReturns)
 				if err != nil {
 					return nil, err
 				}
@@ -210,7 +210,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				}{v, e}
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncMultipleReturns)
+				cf, err := cloneFunc(testCloneFuncMultipleReturns)
 				if err != nil {
 					return nil, err
 				}
@@ -227,7 +227,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncFloat(2.5)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncFloat)
+				cf, err := cloneFunc(testCloneFuncFloat)
 				if err != nil {
 					return nil, err
 				}
@@ -240,7 +240,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithLoop(10)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithLoop)
+				cf, err := cloneFunc(testCloneFuncWithLoop)
 				if err != nil {
 					return nil, err
 				}
@@ -253,7 +253,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithConditional(5)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithConditional)
+				cf, err := cloneFunc(testCloneFuncWithConditional)
 				if err != nil {
 					return nil, err
 				}
@@ -266,7 +266,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithConditional(50)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithConditional)
+				cf, err := cloneFunc(testCloneFuncWithConditional)
 				if err != nil {
 					return nil, err
 				}
@@ -279,7 +279,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithConditional(500)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithConditional)
+				cf, err := cloneFunc(testCloneFuncWithConditional)
 				if err != nil {
 					return nil, err
 				}
@@ -292,7 +292,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithSlice([]int{1, 2, 3, 4, 5})
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithSlice)
+				cf, err := cloneFunc(testCloneFuncWithSlice)
 				if err != nil {
 					return nil, err
 				}
@@ -305,7 +305,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithPointer(nil)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithPointer)
+				cf, err := cloneFunc(testCloneFuncWithPointer)
 				if err != nil {
 					return nil, err
 				}
@@ -319,7 +319,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncWithPointer(&v)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncWithPointer)
+				cf, err := cloneFunc(testCloneFuncWithPointer)
 				if err != nil {
 					return nil, err
 				}
@@ -333,7 +333,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncVariadic()
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncVariadic)
+				cf, err := cloneFunc(testCloneFuncVariadic)
 				if err != nil {
 					return nil, err
 				}
@@ -346,7 +346,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncVariadic(42)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncVariadic)
+				cf, err := cloneFunc(testCloneFuncVariadic)
 				if err != nil {
 					return nil, err
 				}
@@ -359,7 +359,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncVariadic(1, 2, 3, 4, 5)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncVariadic)
+				cf, err := cloneFunc(testCloneFuncVariadic)
 				if err != nil {
 					return nil, err
 				}
@@ -372,7 +372,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncGeneric(21)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncGeneric[int])
+				cf, err := cloneFunc(testCloneFuncGeneric[int])
 				if err != nil {
 					return nil, err
 				}
@@ -385,7 +385,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncGeneric(3.14)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncGeneric[float64])
+				cf, err := cloneFunc(testCloneFuncGeneric[float64])
 				if err != nil {
 					return nil, err
 				}
@@ -398,7 +398,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncComplex128(complex(1, 2))
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncComplex128)
+				cf, err := cloneFunc(testCloneFuncComplex128)
 				if err != nil {
 					return nil, err
 				}
@@ -411,7 +411,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncInt64(0x12345678, 0xABCDEF00)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncInt64)
+				cf, err := cloneFunc(testCloneFuncInt64)
 				if err != nil {
 					return nil, err
 				}
@@ -424,7 +424,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return testCloneFuncNested(5)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(testCloneFuncNested)
+				cf, err := cloneFunc(testCloneFuncNested)
 				if err != nil {
 					return nil, err
 				}
@@ -437,7 +437,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return time.Now().Truncate(time.Hour)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(time.Now)
+				cf, err := cloneFunc(time.Now)
 				if err != nil {
 					return nil, err
 				}
@@ -450,7 +450,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return math.Sqrt(16.0)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(math.Sqrt)
+				cf, err := cloneFunc(math.Sqrt)
 				if err != nil {
 					return nil, err
 				}
@@ -463,7 +463,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return math.Sin(math.Pi / 2)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(math.Sin)
+				cf, err := cloneFunc(math.Sin)
 				if err != nil {
 					return nil, err
 				}
@@ -476,7 +476,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return math.Pow(2.0, 8.0)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(math.Pow)
+				cf, err := cloneFunc(math.Pow)
 				if err != nil {
 					return nil, err
 				}
@@ -489,7 +489,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return math.Max(42.5, 17.3)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(math.Max)
+				cf, err := cloneFunc(math.Max)
 				if err != nil {
 					return nil, err
 				}
@@ -502,7 +502,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return strings.ToUpper("hello world")
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(strings.ToUpper)
+				cf, err := cloneFunc(strings.ToUpper)
 				if err != nil {
 					return nil, err
 				}
@@ -515,7 +515,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return strings.Contains("hello world", "world")
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(strings.Contains)
+				cf, err := cloneFunc(strings.Contains)
 				if err != nil {
 					return nil, err
 				}
@@ -528,7 +528,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return strings.HasPrefix("prefix-test", "prefix")
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(strings.HasPrefix)
+				cf, err := cloneFunc(strings.HasPrefix)
 				if err != nil {
 					return nil, err
 				}
@@ -541,7 +541,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return strings.Join([]string{"a", "b", "c"}, ",")
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(strings.Join)
+				cf, err := cloneFunc(strings.Join)
 				if err != nil {
 					return nil, err
 				}
@@ -558,7 +558,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				}{v, e}
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(strconv.Atoi)
+				cf, err := cloneFunc(strconv.Atoi)
 				if err != nil {
 					return nil, err
 				}
@@ -575,7 +575,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return strconv.FormatInt(255, 16)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(strconv.FormatInt)
+				cf, err := cloneFunc(strconv.FormatInt)
 				if err != nil {
 					return nil, err
 				}
@@ -590,7 +590,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return data
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(sort.Ints)
+				cf, err := cloneFunc(sort.Ints)
 				if err != nil {
 					return nil, err
 				}
@@ -607,7 +607,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return data
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(sort.Strings)
+				cf, err := cloneFunc(sort.Strings)
 				if err != nil {
 					return nil, err
 				}
@@ -623,7 +623,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return time.Since(past).Truncate(time.Hour)
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(time.Since)
+				cf, err := cloneFunc(time.Since)
 				if err != nil {
 					return nil, err
 				}
@@ -637,7 +637,7 @@ func TestCloneFunc_VariousFunctions(t *testing.T) {
 				return time.Unix(1234567890, 0).UTC()
 			},
 			cloneAndCall: func(t *testing.T) (any, error) {
-				cf, err := CloneFunc(time.Unix)
+				cf, err := cloneFunc(time.Unix)
 				if err != nil {
 					return nil, err
 				}
@@ -665,7 +665,7 @@ func TestCloneFunc_Method(t *testing.T) {
 	assert := assert.New(t)
 	expected := base64.StdEncoding.EncodeToString([]byte("test data"))
 
-	cf, err := CloneFunc(base64.StdEncoding.EncodeToString)
+	cf, err := cloneFunc(base64.StdEncoding.EncodeToString)
 	if !assert.NoError(err) {
 		return
 	}

@@ -23,6 +23,11 @@ func TestFunc(t *testing.T) {
 	assert.Equal("a", a())
 	assert.NoError(Func(a, b))
 	assert.Equal("b", a())
+
+	assert.Equal("a", Original(a)())
+
+	assert.NoError(Restore(a))
+	assert.Equal("a", a())
 }
 
 func TestFunc_NotAFunction(t *testing.T) {

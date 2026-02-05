@@ -10,18 +10,18 @@ import (
 	"github.com/pboyd/malloc"
 )
 
-// CloneFunc makes a copy of a function that persists after the original
+// cloneFunc makes a copy of a function that persists after the original
 // function has been modified.
 //
 // Note that this only works for functions. Methods can be cloned, but will
 // panic when called.
-func CloneFunc[T any](fn T) (*ClonedFunc[T], error) {
+func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {
 		return nil, fmt.Errorf("not a function, kind: %v", fnv.Kind())
 	}
 
-	originalCode, err := funcSlice(fnv)
+	originalCode, err := funcSlice(fn)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +44,16 @@ func CloneFunc[T any](fn T) (*ClonedFunc[T], error) {
 	// buffer of machine instructions and convince Go that it's really a
 	// function pointer of type T.
 	codeData := unsafe.SliceData(newCode)
-	cf := ClonedFunc[T]{
-		code: newCode,
+	cf := clonedFunc[T]{
+		clonedCode: newCode,
 		// Keep a reference to codeData so it stays around.
 		ref: &codeData,
 	}
 	cf.Func = *(*T)(unsafe.Pointer(uintptr(unsafe.Pointer(&cf.ref))))
+
+	// Make a copy of the code so that no matter what it can be restored.
+	cf.originalCode = make([]byte, len(originalCode))
+	copy(cf.originalCode, originalCode)
 
 	return &cf, nil
 }
@@ -99,21 +103,23 @@ func (a *allocator) Free(buf []byte) {
 
 var cloneAllocator = &allocator{}
 
-// ClonedFunc holds a copy of a function.
-type ClonedFunc[T any] struct {
+// clonedFunc holds a copy of a function.
+type clonedFunc[T any] struct {
 	Func T
 
 	// The data for this slice is allocated in the mmap page and managed by
 	// allocator. Keep a reference in order to free it.
-	code []byte
-	ref  **byte
+	clonedCode []byte
+	ref        **byte
+
+	originalCode []byte
 }
 
 // Free releases the memory associated with the cloned function.
-func (cf *ClonedFunc[T]) Free() {
-	cloneAllocator.Free(cf.code)
+func (cf *clonedFunc[T]) Free() {
+	cloneAllocator.Free(cf.clonedCode)
 
-	cf.code = nil
+	cf.clonedCode = nil
 	*cf.ref = nil
 	cf.ref = nil
 }
