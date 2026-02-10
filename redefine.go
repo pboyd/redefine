@@ -191,8 +191,6 @@ func unsafeFunc[T any](fn T, newFn any) error {
 	}
 	defer mprotect(code, mprotectRX)
 
-	// TODO: If the size the new code is less than the size of the old code
-	// then why not just copy it?
 	return insertJump(code, reflect.ValueOf(newFn).Pointer())
 }
 

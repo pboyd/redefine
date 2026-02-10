@@ -25,6 +25,9 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 
 	//fmt.Println(disassemble(originalCode))
 
+	cloneAllocator.BeginMutate()
+	defer cloneAllocator.EndMutate()
+
 	newCode, err := cloneAllocator.Allocate(len(originalCode))
 	if err != nil {
 		return nil, err
@@ -59,24 +62,56 @@ type allocator struct {
 	*malloc.Arena
 	mu       sync.Mutex
 	initOnce sync.Once
+	buf      []byte
+	mutable  bool
 }
 
 func (a *allocator) init() error {
 	var err error
 	a.initOnce.Do(func() {
-		var buf []byte
 		// FIXME: The amount of memory to allocate should be configurable
-		buf, err = mmap(1024*1024, mprotectRWX)
+		a.buf, err = mmap(1024*1024, mprotectRWX)
 		if err != nil {
 			return
 		}
+		a.mutable = true
 
-		a.Arena = malloc.NewArenaAt(buf)
+		a.Arena = malloc.NewArenaAt(a.buf)
 		if a.Arena == nil {
 			err = errors.New("unable to initialize arena")
 			return
 		}
 	})
+	return err
+}
+
+func (a *allocator) BeginMutate() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.buf == nil || a.mutable {
+		return nil
+	}
+
+	err := mprotect(a.buf, mprotectRWX)
+	if err == nil {
+		a.mutable = true
+	}
+	return err
+}
+
+func (a *allocator) EndMutate() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if !a.mutable {
+		return nil
+	}
+
+	err := mprotect(a.buf, mprotectRX)
+	if err == nil {
+		a.mutable = false
+	}
 	return err
 }
 
@@ -88,12 +123,20 @@ func (a *allocator) Allocate(size int) ([]byte, error) {
 		return nil, fmt.Errorf("error initializing allocator: %w", err)
 	}
 
+	if !a.mutable {
+		panic("Allocate called in immutable state")
+	}
+
 	return malloc.MallocSlice[byte](a.Arena, size)
 }
 
 func (a *allocator) Free(buf []byte) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	if !a.mutable {
+		panic("Free called in immutable state")
+	}
 
 	malloc.FreeSlice(a.Arena, buf)
 }
@@ -105,7 +148,7 @@ type clonedFunc[T any] struct {
 	Func T
 
 	// The data for this slice is allocated in the mmap page and managed by
-	// allocator. Keep a reference in order to free it.
+	// the cloneAllocator. Keep a reference in order to free it.
 	clonedCode []byte
 	ref        **byte
 
@@ -114,6 +157,9 @@ type clonedFunc[T any] struct {
 
 // Free releases the memory associated with the cloned function.
 func (cf *clonedFunc[T]) Free() {
+	cloneAllocator.BeginMutate()
+	defer cloneAllocator.EndMutate()
+
 	cloneAllocator.Free(cf.clonedCode)
 
 	cf.clonedCode = nil
