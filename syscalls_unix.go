@@ -11,26 +11,17 @@ const (
 )
 
 func mprotect(buf []byte, flags int) error {
-	addr := uintptr(unsafe.Pointer(unsafe.SliceData(buf)))
-
 	pageSize := syscall.Getpagesize()
 
+	addr := uintptr(unsafe.Pointer(unsafe.SliceData(buf)))
+
 	// Round address down to page boundary.
-	// Example: addr=4196 with pageSize=4096 becomes 4096.
 	pageStart := addr &^ (uintptr(pageSize) - 1)
 
-	// Calculate how many bytes from pageStart we need to cover.
-	// This includes the offset from pageStart to addr, plus the requested length.
-	offsetWithinPage := int(addr - pageStart)
-	totalBytes := offsetWithinPage + cap(buf)
-
 	// Round up to cover complete pages.
-	regionSize := (totalBytes + pageSize - 1) &^ (pageSize - 1)
+	regionSize := (int(addr-pageStart) + cap(buf) + pageSize - 1) &^ (pageSize - 1)
 
-	// Convert the memory region to a byte slice for mprotect.
-	region := unsafe.Slice((*byte)(unsafe.Pointer(pageStart)), regionSize)
-
-	return syscall.Mprotect(region, flags)
+	return syscall.Mprotect(unsafe.Slice((*byte)(unsafe.Pointer(pageStart)), regionSize), flags)
 }
 
 // Not defined for GOOS=darwin for some reason
