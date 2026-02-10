@@ -4,7 +4,7 @@
 
 Highly experimental package to redefine Go functions at runtime.
 
-If you think you need this, you're almost certainly wrong. It exists because I wondered if were possible to redefine Go functions like some interpreted allow (Ruby, Perl, etc.).
+If you think you need this, you're almost certainly wrong. It exists because I wondered if it was possible to redefine Go functions like some interpreted allow (Ruby, Perl, etc.).
 
 ```go
 package main
