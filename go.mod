@@ -1,6 +1,6 @@
 module github.com/pboyd/redefine
 
-go 1.24.0
+go 1.25
 
 require (
 	github.com/pboyd/malloc v0.10.0
