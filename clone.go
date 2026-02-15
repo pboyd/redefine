@@ -60,27 +60,30 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 
 type allocator struct {
 	*malloc.Arena
+	mprotect func(int) error
 	mu       sync.Mutex
 	initOnce sync.Once
-	buf      []byte
 	mutable  bool
 }
 
-func (a *allocator) init() error {
+func (a *allocator) init(startSize int) error {
 	var err error
 	a.initOnce.Do(func() {
-		// FIXME: The amount of memory to allocate should be configurable
-		a.buf, err = mmap(1024*1024, mprotectRWX)
-		if err != nil {
-			return
+		be := malloc.MmapBackend(mprotectExec, map_32bit)
+		if protBE, ok := be.(malloc.ProtectedArenaBackend); ok {
+			a.mprotect = protBE.Protect
+		} else {
+			a.mprotect = func(int) error {
+				return nil
+			}
 		}
-		a.mutable = true
 
-		a.Arena = malloc.NewArenaAt(a.buf)
+		a.Arena = malloc.NewArena(uint64(startSize), malloc.Backend(be))
 		if a.Arena == nil {
 			err = errors.New("unable to initialize arena")
 			return
 		}
+		a.mutable = true
 	})
 	return err
 }
@@ -89,11 +92,13 @@ func (a *allocator) BeginMutate() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if a.buf == nil || a.mutable {
+	// Note that BeginMutate can be called before the initial allocation.
+
+	if a.mprotect == nil || a.mutable {
 		return nil
 	}
 
-	err := mprotect(a.buf, mprotectRWX)
+	err := a.mprotect(mprotectRWX)
 	if err == nil {
 		a.mutable = true
 	}
@@ -108,7 +113,7 @@ func (a *allocator) EndMutate() error {
 		return nil
 	}
 
-	err := mprotect(a.buf, mprotectRX)
+	err := a.mprotect(mprotectRX)
 	if err == nil {
 		a.mutable = false
 	}
@@ -118,7 +123,7 @@ func (a *allocator) EndMutate() error {
 func (a *allocator) Allocate(size int) ([]byte, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	err := a.init()
+	err := a.init(size)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing allocator: %w", err)
 	}
