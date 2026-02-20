@@ -4,6 +4,8 @@ github.com/pboyd/malloc v0.10.0 h1:FXmxFlJPKxXJmprZdg9YTQUgRdYxk2H1UpXrvXB+Glg=
 github.com/pboyd/malloc v0.10.0/go.mod h1:kUM22vr9tZZT7FapNCkRkFzXaTDbD8VKZPV94KY5ums=
 github.com/pboyd/malloc v1.1.0 h1:xVOGFPmrMYU+uV5YnIHcvaXeZi8ERNE/umKwv9aXqKs=
 github.com/pboyd/malloc v1.1.0/go.mod h1:YGRIeEWvukIMTTZffUkV74qEnoRmuAp9mPrw0LDk3SE=
+github.com/pboyd/malloc v1.2.0 h1:YrXyBimK7NsNiUVqKznnKir9aCCmMN5+/tzu5qvEu8M=
+github.com/pboyd/malloc v1.2.0/go.mod h1:YGRIeEWvukIMTTZffUkV74qEnoRmuAp9mPrw0LDk3SE=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
@@ -14,6 +16,8 @@ golang.org/x/exp v0.0.0-20260112195511-716be5621a96 h1:Z/6YuSHTLOHfNFdb8zVZomZr7
 golang.org/x/exp v0.0.0-20260112195511-716be5621a96/go.mod h1:nzimsREAkjBCIEFtHiYkrJyT+2uy9YZJB7H1k68CXZU=
 golang.org/x/exp v0.0.0-20260212183809-81e46e3db34a h1:ovFr6Z0MNmU7nH8VaX5xqw+05ST2uO1exVfZPVqRC5o=
 golang.org/x/exp v0.0.0-20260212183809-81e46e3db34a/go.mod h1:K79w1Vqn7PoiZn+TkNpx3BUWUQksGO3JcVX6qIjytmA=
+golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa h1:Zt3DZoOFFYkKhDT3v7Lm9FDMEV06GpzjG2jrqW+QTE0=
+golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa/go.mod h1:K79w1Vqn7PoiZn+TkNpx3BUWUQksGO3JcVX6qIjytmA=
 golang.org/x/sys v0.41.0 h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=
 golang.org/x/sys v0.41.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=

@@ -1,4 +1,4 @@
-//go:build linux || darwin || openbsd || netbsd || freebsd
+//go:build windows
 
 package redefine
 
@@ -6,13 +6,13 @@ import (
 	"syscall"
 	"unsafe"
 
-	"golang.org/x/sys/unix"
+	"golang.org/x/sys/windows"
 )
 
 const (
-	mprotectExec = syscall.PROT_EXEC
-	mprotectRX   = syscall.PROT_READ | syscall.PROT_EXEC
-	mprotectRWX  = syscall.PROT_READ | syscall.PROT_WRITE | syscall.PROT_EXEC
+	mprotectExec = windows.PAGE_EXECUTE
+	mprotectRX   = windows.PAGE_EXECUTE_READ
+	mprotectRWX  = windows.PAGE_EXECUTE_READWRITE
 )
 
 func mprotect(buf []byte, flags int) error {
@@ -26,5 +26,6 @@ func mprotect(buf []byte, flags int) error {
 	// Round up to cover complete pages.
 	regionSize := (int(addr-pageStart) + cap(buf) + pageSize - 1) &^ (pageSize - 1)
 
-	return unix.Mprotect(unsafe.Slice((*byte)(unsafe.Pointer(pageStart)), regionSize), flags)
+	var oldFlags uint32
+	return windows.VirtualProtect(pageStart, uintptr(regionSize), uint32(flags), &oldFlags)
 }
