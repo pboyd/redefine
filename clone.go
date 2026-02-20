@@ -3,8 +3,11 @@ package redefine
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
+	"runtime"
 	"sync"
+	"syscall"
 	"unsafe"
 
 	"github.com/pboyd/malloc"
@@ -69,13 +72,10 @@ type allocator struct {
 func (a *allocator) init(startSize int) error {
 	var err error
 	a.initOnce.Do(func() {
-		be := malloc.MmapBackend(mprotectExec, map_32bit)
-		if protBE, ok := be.(malloc.ProtectedArenaBackend); ok {
-			a.mprotect = protBE.Protect
-		} else {
-			a.mprotect = func(int) error {
-				return nil
-			}
+		var be malloc.ArenaBackend
+		be, err = initMallocBackend()
+		if err != nil {
+			return
 		}
 
 		a.Arena = malloc.NewArena(uint64(startSize), malloc.Backend(be))
@@ -83,9 +83,84 @@ func (a *allocator) init(startSize int) error {
 			err = errors.New("unable to initialize arena")
 			return
 		}
+
+		if protBE, ok := be.(malloc.ProtectedArenaBackend); ok {
+			a.mprotect = protBE.Protect
+		} else {
+			// No real mprotect for some reason. This shouldn't
+			// really happen, but continue with a no-op mprotect.
+			a.mprotect = func(int) error { return nil }
+		}
 		a.mutable = true
 	})
 	return err
+}
+
+// The maximum acceptable distance from the text and data segments.
+// This is the value from amd64, arm64 will be less.
+const maxCloneDistance = math.MaxInt32
+
+// The lowest address to consider for our cloned functions.
+const absMinAddress = 0x100000
+
+func initMallocBackend() (malloc.ArenaBackend, error) {
+	var text, etext uintptr
+	var end uintptr
+	pc, _, _, _ := runtime.Caller(0)
+	datap := findfunc(pc).datap
+	if datap != nil {
+		text = datap.text
+		etext = datap.etext
+		end = datap.end
+	}
+	if text == 0 || etext == 0 || end == 0 {
+		return nil, fmt.Errorf("failed to find moduledata")
+	}
+
+	pageSize := uintptr(syscall.Getpagesize())
+
+	// Calculate the virtual memory reservation size. This amount
+	// is reserved up-front, but pages are only committed as
+	// needed.
+	//
+	// Use the size of the existing text segment so there's enough space to
+	// clone every statically-linked function.
+	size := (etext - text + pageSize - 1) &^ (pageSize - 1)
+
+	// Cloned functions need to be near the existing text and data
+	// segments so that they can be reached by the same
+	// instructions that the original function used. There's often enough
+	// space right before the text segment but that's not guaranteed
+	// (particularly when buildmode=pie).
+
+	// The minimum acceptable address is where the first
+	// instruction in the code segment can still reach the final
+	// address before end. These are unsigned so watch for wrap-around.
+	minAddress := end - maxCloneDistance
+	if minAddress > end || minAddress < absMinAddress {
+		minAddress = absMinAddress
+	}
+	for addr := text - pageSize - size; addr >= minAddress; addr -= 0x100000 {
+		be, err := malloc.VirtBackend(size, malloc.MmapAddr(addr), malloc.MmapProt(mprotectExec), malloc.MmapFlags(_MAP_FIXED_NOREPLACE))
+		if err == nil {
+			return be, nil
+		}
+	}
+
+	// Nothing was found before the text segment, repeat the process for
+	// the space after end.
+	maxAddress := text + maxCloneDistance - size
+	if maxAddress < text {
+		maxAddress = math.MaxUint
+	}
+	for addr := end; addr <= maxAddress; addr += 0x100000 {
+		be, err := malloc.VirtBackend(size, malloc.MmapAddr(addr), malloc.MmapProt(mprotectExec), malloc.MmapFlags(_MAP_FIXED_NOREPLACE))
+		if err == nil {
+			return be, nil
+		}
+	}
+
+	return nil, errors.New("no suitable virtual memory space found")
 }
 
 func (a *allocator) BeginMutate() error {
