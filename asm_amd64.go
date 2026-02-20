@@ -36,7 +36,7 @@ func insertJump(buf []byte, dest uintptr) error {
 	diff32 := int32(dest - src)
 	binary.LittleEndian.PutUint32(buf[1:], uint32(diff32))
 
-	// Pad the rest of the buffer INT3 opcodes to match what the compiler does
+	// Pad the rest of the buffer with INT3 opcodes to match what the compiler does
 	for i := instructionSize; i < len(buf); i++ {
 		buf[i] = opcodeINT3
 	}
