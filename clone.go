@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"sync"
 	"syscall"
-	"unsafe"
 
 	"github.com/pboyd/malloc"
 )
@@ -26,39 +25,16 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 		return nil, err
 	}
 
-	//fmt.Println(disassemble(originalCode))
-
-	cloneAllocator.BeginMutate()
-	defer cloneAllocator.EndMutate()
-
-	newCode, err := cloneAllocator.Allocate(len(originalCode))
+	cf, err := _cloneFunc(fn, originalCode)
 	if err != nil {
 		return nil, err
 	}
-
-	newCode, err = relocateFunc(originalCode, newCode)
-	if err != nil {
-		return nil, err
-	}
-
-	//fmt.Println(disassemble(newCode))
-
-	// This seems too complicated. The idea is to take our newly allocated
-	// buffer of machine instructions and convince Go that it's really a
-	// function pointer of type T.
-	codeData := unsafe.SliceData(newCode)
-	cf := clonedFunc[T]{
-		clonedCode: newCode,
-		// Keep a reference to codeData so it stays around.
-		ref: &codeData,
-	}
-	cf.Func = *(*T)(unsafe.Pointer(uintptr(unsafe.Pointer(&cf.ref))))
 
 	// Make a copy of the code so that no matter what it can be restored.
 	cf.originalCode = make([]byte, len(originalCode))
 	copy(cf.originalCode, originalCode)
 
-	return &cf, nil
+	return cf, nil
 }
 
 type allocator struct {
@@ -240,10 +216,14 @@ func (cf *clonedFunc[T]) Free() {
 	cloneAllocator.BeginMutate()
 	defer cloneAllocator.EndMutate()
 
-	cloneAllocator.Free(cf.clonedCode)
+	if cf.clonedCode != nil {
+		cloneAllocator.Free(cf.clonedCode)
+	}
 
 	cf.clonedCode = nil
-	*cf.ref = nil
-	cf.ref = nil
+	if cf.ref != nil {
+		*cf.ref = nil
+		cf.ref = nil
+	}
 	cf.originalCode = nil
 }
