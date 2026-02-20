@@ -1,0 +1,33 @@
+name: Compile check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Check compilation on untested platforms (go ${{ matrix.go-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        go-version: ['1.25', '1.26']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Compile tests
+        run: |
+          for os in openbsd netbsd freebsd; do
+            echo "Compiling for $os..."
+            GOOS=$os go test -c
+          done
