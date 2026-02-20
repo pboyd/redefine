@@ -29,6 +29,20 @@ Outputs:
 It's 5:00 PM somewhere
 ```
 
+## Compatibility
+
+| OS | Architecture | Status | Notes |
+|----|-------------|--------|-------|
+| Linux | amd64 | Full | |
+| Windows | amd64 | Full | |
+| Darwin (macOS) | amd64 | Full | |
+| Linux | arm64 | Partial | `redefine.Func` and `redefine.Restore` work |
+| FreeBSD | amd64 | Untested | Compiles but untested |
+| OpenBSD | amd64 | Untested | Compiles but untested |
+| NetBSD | amd64 | Untested | Compiles but untested |
+| Windows | arm64 | Untested | No build environment available |
+| Darwin (macOS) | arm64 | Broken | `mprotect` returns EACCES |
+
 ## FAQ
 
 ### Yikes! Why?
