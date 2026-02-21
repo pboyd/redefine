@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sync"
 	"syscall"
+	"unsafe"
 
 	"github.com/pboyd/malloc"
 )
@@ -25,16 +26,37 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 		return nil, err
 	}
 
-	cf, err := _cloneFunc(fn, originalCode)
+	cloneAllocator.BeginMutate()
+	defer cloneAllocator.EndMutate()
+
+	newCode, err := cloneAllocator.Allocate(len(originalCode))
 	if err != nil {
 		return nil, err
 	}
+
+	newCode, err = relocateFunc(originalCode, newCode)
+	if err != nil {
+		return nil, err
+	}
+
+	cacheflush(newCode)
+
+	// This seems too complicated. The idea is to take our newly allocated
+	// buffer of machine instructions and convince Go that it's really a
+	// function pointer of type T.
+	codeData := unsafe.SliceData(newCode)
+	cf := clonedFunc[T]{
+		clonedCode: newCode,
+		// Keep a reference to codeData so it stays around.
+		ref: &codeData,
+	}
+	cf.Func = *(*T)(unsafe.Pointer(uintptr(unsafe.Pointer(&cf.ref))))
 
 	// Make a copy of the code so that no matter what it can be restored.
 	cf.originalCode = make([]byte, len(originalCode))
 	copy(cf.originalCode, originalCode)
 
-	return cf, nil
+	return &cf, nil
 }
 
 type allocator struct {
@@ -71,10 +93,6 @@ func (a *allocator) init(startSize int) error {
 	})
 	return err
 }
-
-// The maximum acceptable distance from the text and data segments.
-// This is the value from amd64, arm64 will be less.
-const maxCloneDistance = math.MaxInt32
 
 // The lowest address to consider for our cloned functions.
 const absMinAddress = 0x100000

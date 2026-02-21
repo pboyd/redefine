@@ -19,6 +19,9 @@ const (
 	opcodeJMP     = 0xe9 // JMP rel32
 )
 
+// The maximum acceptable distance from the text and data segments.
+const maxCloneDistance = math.MaxInt32
+
 func insertJump(buf []byte, dest uintptr) error {
 	const instructionSize = 5 // 1 byte opcode + 4 byte address
 
@@ -45,12 +48,10 @@ func insertJump(buf []byte, dest uintptr) error {
 }
 
 // relocateFunc copies machine instructions from src into dest translating
-// relative instructions as it goes. dest must be larger than src.
+// relative instructions as it goes. dest must be at least as large as src.
 //
 // The data underlying the slices is assumed to be the same address the code
 // would execute from.
-//
-// The dest slice is returned after being resized.
 func relocateFunc(src, dest []byte) ([]byte, error) {
 	dest = dest[:len(src)]
 
