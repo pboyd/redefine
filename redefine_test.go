@@ -24,6 +24,8 @@ func TestFunc(t *testing.T) {
 	assert.NoError(Func(a, b))
 	assert.Equal("b", a())
 
+	assert.Equal("a", Original(a)())
+
 	assert.NoError(Restore(a))
 	assert.Equal("a", a())
 }
@@ -272,12 +274,15 @@ func TestMethod(t *testing.T) {
 	ts.Inc()
 	assert.Equal(8, ts.Num)
 
+	Original((*testStruct).Inc)(ts)
+	assert.Equal(9, ts.Num)
+
 	ts.Inc()
-	assert.Equal(16, ts.Num)
+	assert.Equal(18, ts.Num)
 
 	assert.NoError(Restore((*testStruct).Inc))
 	ts.Inc()
-	assert.Equal(17, ts.Num)
+	assert.Equal(19, ts.Num)
 }
 
 func TestMethod_DifferentTypeSizes(t *testing.T) {
