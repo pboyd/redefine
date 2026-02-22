@@ -5,9 +5,8 @@
 // is a fun experiment, but do not use it for production code.
 //
 // This project is fundamentally non-portable. OS/Arch support:
-//   - Full support: Linux/amd64, Windows/amd64, Darwin/amd64, Linux/arm64
+//   - Full support: Linux/amd64, Windows/amd64, Darwin/amd64, Linux/arm64, Windows/arm64
 //   - Might work (untested, but it compiles): FreeBSD/amd64, OpenBSD/amd64, NetBSD/amd64
-//   - Also might work: Windows/arm64 (I lack a working build environment)
 //   - Known broken: Darwin/arm64 (EACCES errors from mprotect)
 //
 // Other limitations:
