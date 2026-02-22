@@ -37,10 +37,10 @@ It's 5:00 PM somewhere
 | Windows | amd64 | Full | |
 | Darwin (macOS) | amd64 | Full | |
 | Linux | arm64 | Full | |
+| Windows | arm64 | Full | |
 | FreeBSD | amd64 | Untested | Compiles but untested |
 | OpenBSD | amd64 | Untested | Compiles but untested |
 | NetBSD | amd64 | Untested | Compiles but untested |
-| Windows | arm64 | Untested | |
 | Darwin (macOS) | arm64 | Broken | `mprotect` returns EACCES |
 
 ## FAQ

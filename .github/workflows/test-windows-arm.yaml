@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Test Windows/arm64 (go ${{ matrix.go }}, ${{ matrix.host }})
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        # Go 1.25 has a linker error.
+        go: ['1.26']
+        host: ['windows-11-arm']
+    env:
+      # Use clang instead of defaulting to gcc
+      CC: "clang"
+      CGO_LDFLAGS: "-lclang_rt.builtins-aarch64.lib -O2 -g"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+
+      - name: Run tests (buildmode=exe)
+        run: |
+          go test -buildmode=exe ./...
+
+      - name: Run tests (buildmode=pie)
+        run: |
+          go test -buildmode=pie ./...
