@@ -51,7 +51,7 @@ I wondered if it were possible, and it was. Had I searched online first, I would
 
 ### Can I use this to mock test functions?
 
-Yes, but real implementations are almost always better than mocks. If you really must have a mock, use a package meant for that ([github.com/stretchr/testify/mock](https://pkg.go.dev/github.com/stretchr/testify/mock) or [github.com/uber-go/mock](https://pkg.go.dev/github.com/uber-go/mock) to name a couple). If you want to mock time in particular, try [syntest](https://pkg.go.dev/testing/synctest#hdr-Time).
+Yes, but real implementations are almost always better than mocks. If you really must have a mock, use a package meant for that ([github.com/stretchr/testify/mock](https://pkg.go.dev/github.com/stretchr/testify/mock) or [github.com/uber-go/mock](https://pkg.go.dev/github.com/uber-go/mock) to name a couple). And if you want to mock time in particular, try [synctest](https://pkg.go.dev/testing/synctest#hdr-Time).
 
 Or just use a function pointer in your code:
 
