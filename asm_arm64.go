@@ -111,7 +111,7 @@ func fixPCRelAddress(inst arm64asm.Inst, srcPC uintptr, dest []byte) error {
 		p := uint32(newOffsetPages)
 		encoded := binary.LittleEndian.Uint32(dest) &^ adrAddressMask
 		encoded |= (p & 3) << 29 // Lowest 2 bits to bits 30 and 29
-		encoded |= (p >> 2) << 5 // Highest 19 bits to bits 23 to 5
+		encoded |= ((p >> 2) & 0x7ffff) << 5 // Highest 19 bits to bits 23 to 5
 		binary.LittleEndian.PutUint32(dest, encoded)
 
 	case arm64asm.BL:
