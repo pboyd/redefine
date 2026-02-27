@@ -115,7 +115,9 @@ func Original[T any](fn T) T {
 	}
 
 	if clonedType, ok := cloned.(*clonedFunc[T]); ok {
-		return clonedType.Func
+		if clonedType != nil {
+			return clonedType.Func
+		}
 	}
 
 	return *((*T)(nil))
@@ -183,13 +185,13 @@ func unsafeFunc[T any](fn T, newFn any) error {
 		redefined[addr], err = cloneFunc(fn)
 		if err != nil {
 			// TODO: Should this be fatal?
-			return err
+			return fmt.Errorf("unable to clone function: %w", err)
 		}
 	}
 
 	err = mprotect(code, mprotectRWX)
 	if err != nil {
-		return err
+		return fmt.Errorf("mprotect: %w", err)
 	}
 	defer mprotect(code, mprotectRX)
 

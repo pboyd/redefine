@@ -8,4 +8,4 @@ import "golang.org/x/sys/unix"
 // Linux
 //
 // https://man.freebsd.org/cgi/man.cgi?mmap(2)
-const _MAP_FIXED_NOREPLACE = unix.MAP_FIXED | unix.MAP_EXCL
+const _MMAP_FLAGS = unix.MAP_FIXED | unix.MAP_EXCL
