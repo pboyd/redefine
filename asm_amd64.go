@@ -19,7 +19,8 @@ const (
 	opcodeJMP     = 0xe9 // JMP rel32
 )
 
-// The maximum acceptable distance from the text and data segments.
+// Cloned functions need to be within range of a signed 32-bit JMP.
+const idealCloneDistance = 0
 const maxCloneDistance = math.MaxInt32
 
 func insertJump(buf []byte, dest uintptr) error {

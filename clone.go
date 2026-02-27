@@ -13,6 +13,8 @@ import (
 	"github.com/pboyd/malloc"
 )
 
+var errAddressOutOfRange = errors.New("address out of range")
+
 // cloneFunc makes a copy of a function that persists after the original
 // function has been modified.
 func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
@@ -29,14 +31,37 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 	cloneAllocator.BeginMutate()
 	defer cloneAllocator.EndMutate()
 
-	newCode, err := cloneAllocator.Allocate(len(originalCode))
+	var newCode []byte
+
+	for size := len(originalCode); size < len(originalCode)*3; size += len(originalCode) {
+		newCode, err = cloneAllocator.Allocate(size)
+		if err != nil {
+			return nil, err
+		}
+
+		newCode, err = relocateFunc(originalCode, newCode)
+		if err != nil {
+			cloneAllocator.Free(newCode)
+			newCode = nil
+
+			// If the problem is just that there isn't enough room
+			// for the trampoline, try again with a bigger buffer.
+			if errors.Is(err, errAddressOutOfRange) {
+				continue
+			}
+
+			return nil, err
+		}
+
+		break
+	}
+
 	if err != nil {
 		return nil, err
 	}
-
-	newCode, err = relocateFunc(originalCode, newCode)
-	if err != nil {
-		return nil, err
+	if newCode == nil {
+		// this probably never hits because there's an error, but just to be sure
+		return nil, errors.New("failed to allocate memory for cloned function")
 	}
 
 	cacheflush(newCode)
@@ -83,7 +108,7 @@ func (a *allocator) init(startSize int) error {
 		}
 
 		if protBE, ok := be.(malloc.ProtectedArenaBackend); ok {
-			a.mprotect = protBE.Protect
+			a.mprotect = mprotectHook(protBE.Protect)
 		} else {
 			// No real mprotect for some reason. This shouldn't
 			// really happen, but continue with a no-op mprotect.
@@ -126,35 +151,71 @@ func initMallocBackend() (malloc.ArenaBackend, error) {
 	// instructions that the original function used. There's often enough
 	// space right before the text segment but that's not guaranteed
 	// (particularly when buildmode=pie).
+	// The distances are calculated from the furthest address in the
+	// text/data segment so that every address in the reserved block can
+	// reach every address in the target.
 
-	// The minimum acceptable address is where the first
-	// instruction in the code segment can still reach the final
-	// address before end. These are unsigned so watch for wrap-around.
+	// If there's an ideal range for the architecture, try that first.
+	if idealCloneDistance > 0 {
+		// Search before text
+		minAddress := end - idealCloneDistance
+		if minAddress > end || minAddress < absMinAddress {
+			minAddress = absMinAddress
+		}
+		be := tryBackendRange(size, minAddress, text-pageSize-size)
+		if be != nil {
+			return be, nil
+		}
+
+		// Search after end
+		maxAddress := text + idealCloneDistance - size
+		if maxAddress < text {
+			maxAddress = math.MaxUint
+		}
+		be = tryBackendRange(size, end, maxAddress)
+		if be != nil {
+			return be, nil
+		}
+	}
+
+	// Nothing in the ideal range, so search within the acceptable range
 	minAddress := end - maxCloneDistance
 	if minAddress > end || minAddress < absMinAddress {
 		minAddress = absMinAddress
 	}
-	for addr := text - pageSize - size; addr >= minAddress; addr -= 0x100000 {
-		be, err := malloc.VirtBackend(size, malloc.MmapAddr(addr), malloc.MmapProt(mprotectExec), malloc.MmapFlags(_MAP_FIXED_NOREPLACE))
-		if err == nil {
-			return be, nil
-		}
+	be := tryBackendRange(size, minAddress, text-pageSize-size)
+	if be != nil {
+		return be, nil
 	}
 
-	// Nothing was found before the text segment, repeat the process for
-	// the space after end.
 	maxAddress := text + maxCloneDistance - size
 	if maxAddress < text {
 		maxAddress = math.MaxUint
 	}
-	for addr := end; addr <= maxAddress; addr += 0x100000 {
-		be, err := malloc.VirtBackend(size, malloc.MmapAddr(addr), malloc.MmapProt(mprotectExec), malloc.MmapFlags(_MAP_FIXED_NOREPLACE))
+	be = tryBackendRange(size, end, maxAddress)
+	if be != nil {
+		return be, nil
+	}
+
+	// Well, we tried. We tried really hard. There's nothing left to do but
+	// take whatever address the OS gives us.
+	return malloc.VirtBackend(size, malloc.MmapAddr(minAddress), malloc.MmapProt(mprotectExec), malloc.MmapFlags(_MMAP_FLAGS))
+}
+
+func tryBackendRange(size, minAddress, maxAddress uintptr) malloc.ArenaBackend {
+	for addr := minAddress; addr <= maxAddress; addr += 0x100000 {
+		be, err := malloc.VirtBackend(size, malloc.MmapAddr(addr), malloc.MmapProt(mprotectExec), malloc.MmapFlags(_MMAP_FLAGS))
 		if err == nil {
-			return be, nil
+			if be.Addr() < minAddress || be.Addr() > maxAddress {
+				// No good, try again.
+				be.Release()
+			} else {
+				return be
+			}
 		}
 	}
 
-	return nil, errors.New("no suitable virtual memory space found")
+	return nil
 }
 
 func (a *allocator) BeginMutate() error {
