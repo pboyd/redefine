@@ -101,12 +101,6 @@ func (a *allocator) init(startSize int) error {
 			return
 		}
 
-		a.Arena = malloc.NewArena(uint64(startSize), malloc.Backend(be))
-		if a.Arena == nil {
-			err = errors.New("unable to initialize arena")
-			return
-		}
-
 		if protBE, ok := be.(malloc.ProtectedArenaBackend); ok {
 			a.mprotect = mprotectHook(protBE.Protect)
 		} else {
@@ -114,7 +108,18 @@ func (a *allocator) init(startSize int) error {
 			// really happen, but continue with a no-op mprotect.
 			a.mprotect = func(int) error { return nil }
 		}
+
+		// The mmap calls before set the appropriate protections, except for Darwin.
+		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+			a.mprotect(mprotectRWX)
+		}
 		a.mutable = true
+
+		a.Arena = malloc.NewArena(uint64(startSize), malloc.Backend(be))
+		if a.Arena == nil {
+			err = errors.New("unable to initialize arena")
+			return
+		}
 	})
 	return err
 }
