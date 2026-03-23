@@ -1,6 +1,6 @@
-package redefine
+//go:build go1.25 && !go1.26
 
-import _ "unsafe"
+package static
 
 type funcInfo struct {
 	*_func
@@ -55,7 +55,27 @@ type moduledata struct {
 	rodata                uintptr
 	gofunc                uintptr // go.func.*
 
-	// Struct continues, omitting unused fields.
+	textsectmap []textsect
+
+	// The following fields exist in the runtime struct but are not used by
+	// this package. They are included here to correctly place the next field
+	// at the same offset as in the runtime's moduledata struct.
+	_typelinks    [3]uintptr // []int32
+	_itablinks    [3]uintptr // []*itab
+	_ptab         [3]uintptr // []ptabEntry
+	_pluginpath   [2]uintptr // string
+	_pkghashes    [3]uintptr // []modulehash
+	_inittasks    [3]uintptr // []*initTask
+	_modulename   [2]uintptr // string
+	_modulehashes [3]uintptr // []modulehash
+	_hasmain      uint8
+	_bad          bool
+	_             [6]byte    // padding to align the following bitvectors
+	_gcdatamask   [2]uintptr // bitvector
+	_gcbssmask    [2]uintptr // bitvector
+	_typemap      uintptr    // map[typeOff]*_type (a pointer)
+
+	next *moduledata
 }
 
 // pcHeader holds data used by the pclntab lookups.
@@ -79,5 +99,8 @@ type functab struct {
 	funcoff  uint32
 }
 
-//go:linkname findfunc runtime.findfunc
-func findfunc(pc uintptr) funcInfo
+type textsect struct {
+	vaddr    uintptr // prelinked section vaddr
+	end      uintptr // vaddr + section length
+	baseaddr uintptr // relocated section address
+}

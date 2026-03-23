@@ -5,9 +5,8 @@
 // is a fun experiment, but do not use it for production code.
 //
 // This project is fundamentally non-portable. OS/Arch support:
-//   - Full support: Linux/amd64, Windows/amd64, Darwin/amd64, Linux/arm64, Windows/arm64
-//   - Might work (untested, but it compiles): FreeBSD/amd64, OpenBSD/amd64, NetBSD/amd64
-//   - Known broken: Darwin/arm64 (EACCES errors from mprotect)
+//   - Full support: Linux, Windows, Darwin/MacOS on amd64 and arm64
+//   - Might work (untested, but it compiles): FreeBSD, OpenBSD, NetBSD on amd64
 //
 // Other limitations:
 //   - Relies on internal Go APIs that can break at any time

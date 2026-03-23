@@ -1,6 +1,6 @@
 //go:build arm64
 
-package redefine
+package cacheflush
 
 import "unsafe"
 
@@ -11,7 +11,7 @@ static void cacheflush(char *start, char *end) {
 */
 import "C"
 
-func cacheflush(buf []byte) {
+func Flush(buf []byte) {
 	start := unsafe.Pointer(unsafe.SliceData(buf))
 	end := unsafe.Pointer(uintptr(len(buf)) + uintptr(start))
 	C.cacheflush((*C.char)(start), (*C.char)(end))
