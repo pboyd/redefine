@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/pboyd/redefine.svg)](https://pkg.go.dev/github.com/pboyd/redefine)
 
-Highly experimental package to redefine Go functions at runtime as some interpreted languages allow (Ruby, Perl, etc.). I wrote about how this works and some of the limitations [here](https://pboyd.io/posts/redefining-go-functions/). This is a fun experiment, but do not use it for production code.
+Highly experimental package to redefine Go functions at runtime as some interpreted languages allow (Ruby, Perl, etc.). I wrote about how this works and some of the limitations [here](https://pboyd.io/posts/redefining-go-functions/), and about Darwin / Mac OS support in particular [here](https://pboyd.io/posts/redefining-go-functions-on-darwin-arm64/). This is a fun experiment, but do not use it for production code.
 
 ```go
 package main
@@ -38,10 +38,10 @@ It's 5:00 PM somewhere
 | Darwin (macOS) | amd64 | Full | |
 | Linux | arm64 | Full | |
 | Windows | arm64 | Full | |
+| Darwin (macOS) | arm64 | Full | |
 | FreeBSD | amd64 | Untested | Compiles but untested |
 | OpenBSD | amd64 | Untested | Compiles but untested |
 | NetBSD | amd64 | Untested | Compiles but untested |
-| Darwin (macOS) | arm64 | Broken | `mprotect` returns EACCES |
 
 ## FAQ
 

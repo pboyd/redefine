@@ -11,6 +11,8 @@ import (
 	"unsafe"
 
 	"github.com/pboyd/malloc"
+	"github.com/pboyd/redefine/internal/cacheflush"
+	"github.com/pboyd/redefine/internal/static"
 )
 
 var errAddressOutOfRange = errors.New("address out of range")
@@ -23,7 +25,7 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 		return nil, fmt.Errorf("not a function, kind: %v", fnv.Kind())
 	}
 
-	originalCode, err := funcSlice(fn)
+	originalCode, err := static.GetInfo().FuncSlice(fn)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +66,7 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 		return nil, errors.New("failed to allocate memory for cloned function")
 	}
 
-	cacheflush(newCode)
+	cacheflush.Flush(newCode)
 
 	// This seems too complicated. The idea is to take our newly allocated
 	// buffer of machine instructions and convince Go that it's really a
@@ -128,16 +130,9 @@ func (a *allocator) init(startSize int) error {
 const absMinAddress = 0x100000
 
 func initMallocBackend() (malloc.ArenaBackend, error) {
-	var text, etext uintptr
-	var end uintptr
-	pc, _, _, _ := runtime.Caller(0)
-	datap := findfunc(pc).datap
-	if datap != nil {
-		text = datap.text
-		etext = datap.etext
-		end = datap.end
-	}
-	if text == 0 || etext == 0 || end == 0 {
+	info := static.GetInfo()
+	text, etext := info.Text()
+	if text == 0 || etext == 0 || info.End == 0 {
 		return nil, fmt.Errorf("failed to find moduledata")
 	}
 
@@ -149,7 +144,7 @@ func initMallocBackend() (malloc.ArenaBackend, error) {
 	//
 	// Use the size of the existing text segment so there's enough space to
 	// clone every statically-linked function.
-	size := (etext - text + pageSize - 1) &^ (pageSize - 1)
+	size := etext - text
 
 	// Cloned functions need to be near the existing text and data
 	// segments so that they can be reached by the same
@@ -163,8 +158,8 @@ func initMallocBackend() (malloc.ArenaBackend, error) {
 	// If there's an ideal range for the architecture, try that first.
 	if idealCloneDistance > 0 {
 		// Search before text
-		minAddress := end - idealCloneDistance
-		if minAddress > end || minAddress < absMinAddress {
+		minAddress := info.End - idealCloneDistance
+		if minAddress > info.End || minAddress < absMinAddress {
 			minAddress = absMinAddress
 		}
 		be := tryBackendRange(size, minAddress, text-pageSize-size)
@@ -177,15 +172,15 @@ func initMallocBackend() (malloc.ArenaBackend, error) {
 		if maxAddress < text {
 			maxAddress = math.MaxUint
 		}
-		be = tryBackendRange(size, end, maxAddress)
+		be = tryBackendRange(size, info.End, maxAddress)
 		if be != nil {
 			return be, nil
 		}
 	}
 
 	// Nothing in the ideal range, so search within the acceptable range
-	minAddress := end - maxCloneDistance
-	if minAddress > end || minAddress < absMinAddress {
+	minAddress := info.End - maxCloneDistance
+	if minAddress > info.End || minAddress < absMinAddress {
 		minAddress = absMinAddress
 	}
 	be := tryBackendRange(size, minAddress, text-pageSize-size)
@@ -197,7 +192,7 @@ func initMallocBackend() (malloc.ArenaBackend, error) {
 	if maxAddress < text {
 		maxAddress = math.MaxUint
 	}
-	be = tryBackendRange(size, end, maxAddress)
+	be = tryBackendRange(size, info.End, maxAddress)
 	if be != nil {
 		return be, nil
 	}

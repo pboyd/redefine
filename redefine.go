@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
-	"unsafe"
+
+	"github.com/pboyd/redefine/internal/static"
 )
 
 var mu sync.RWMutex
@@ -144,7 +145,7 @@ func Restore[T any](fn T) error {
 		return fmt.Errorf("unknown function type: %T", cloned)
 	}
 
-	code, err := funcSlice(fn)
+	code, err := static.GetInfo().FuncSlice(fn)
 	if err != nil {
 		return err
 	}
@@ -152,33 +153,32 @@ func Restore[T any](fn T) error {
 		return fmt.Errorf("func length mismatch %d != %d", len(code), len(clonedType.originalCode))
 	}
 
-	err = mprotect(code, mprotectRWX)
-	if err != nil {
-		return fmt.Errorf("mprotect: %w", err)
+	if err = applyCodeCopy(code, clonedType.originalCode); err != nil {
+		return fmt.Errorf("restore code: %w", err)
 	}
-	defer mprotect(code, mprotectRX)
-
-	copy(code, clonedType.originalCode)
 
 	clonedType.Free()
 	delete(redefined, fnv.Pointer())
-
-	cacheflush(code)
 
 	return nil
 }
 
 // unsafeFunc redefines a function after the safety checks.
 func unsafeFunc[T any](fn T, newFn any) error {
-	code, err := funcSlice(fn)
-	if err != nil {
-		return err
-	}
-
 	// Locked to prevent simultaneous writes to the map and competing
 	// mprotect calls
 	mu.Lock()
 	defer mu.Unlock()
+
+	err := static.Fork()
+	if err != nil {
+		return fmt.Errorf("failed to re-allocate program text segment: %w", err)
+	}
+
+	code, err := static.GetInfo().FuncSlice(fn)
+	if err != nil {
+		return err
+	}
 
 	addr := reflect.ValueOf(fn).Pointer()
 	if _, ok := redefined[addr]; !ok {
@@ -189,53 +189,5 @@ func unsafeFunc[T any](fn T, newFn any) error {
 		}
 	}
 
-	err = mprotect(code, mprotectRWX)
-	if err != nil {
-		return fmt.Errorf("mprotect: %w", err)
-	}
-	defer mprotect(code, mprotectRX)
-
-	err = insertJump(code, reflect.ValueOf(newFn).Pointer())
-	if err != nil {
-		return err
-	}
-
-	cacheflush(code)
-	return nil
-}
-
-// funcSlice returns a slice containing the machine instructions for a function.
-func funcSlice(fn any) ([]byte, error) {
-	fnv := reflect.ValueOf(fn)
-	if fnv.Kind() != reflect.Func {
-		return nil, fmt.Errorf("not a function, kind: %v", fnv.Kind())
-	}
-
-	entry := fnv.Pointer()
-
-	// To find the length, look at the offsets of every function and find
-	// the one that comes immediately after this one.
-
-	// TODO: Is there a better way to do this?
-	//    - ftab seems to be ordered so could it find the next entry that way?
-	//    - is the info stored somewhere more conveniently in datap?
-
-	info := findfunc(entry)
-	funcOffset := uint32(entry - info.datap.text)
-	length := uint32(info.datap.etext - entry)
-
-	for _, ft := range info.datap.ftab {
-		// Does this function come before the one we're looking for?
-		if ft.entryoff <= funcOffset {
-			continue
-		}
-
-		// Is the distance between these two functions less than what we've seen before?
-		testLength := ft.entryoff - funcOffset
-		if testLength < length {
-			length = testLength
-		}
-	}
-
-	return unsafe.Slice((*byte)(unsafe.Pointer(entry)), length), nil
+	return applyCodeJump(code, reflect.ValueOf(newFn).Pointer())
 }
