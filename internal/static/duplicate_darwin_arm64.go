@@ -244,14 +244,16 @@ func patchRodataCodePtrs(offset uintptr, moddata *moduledata) error {
 		}
 	}
 
+	err = unix.Mprotect(tmpSlice, unix.PROT_READ|unix.PROT_EXEC)
+	if err != nil {
+		unix.MunmapPtr(tmpPtr, size)
+		return fmt.Errorf("mprotect temp to r-x: %w", err)
+	}
+
 	_, err = mach.VmRemap(mapStart, uintptr(tmpPtr), size)
 	if err != nil {
 		unix.MunmapPtr(tmpPtr, size)
 		return fmt.Errorf("vm_remap rodata (%d bytes at %#x): %w", size, mapStart, err)
-	}
-
-	if err := unix.Mprotect(unsafe.Slice((*byte)(unsafe.Pointer(mapStart)), int(size)), unix.PROT_READ); err != nil {
-		return fmt.Errorf("mprotect rodata to r: %w", err)
 	}
 
 	unix.MunmapPtr(tmpPtr, size)
