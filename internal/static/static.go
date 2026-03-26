@@ -48,19 +48,11 @@ func GetInfo() *Info {
 
 type Info struct {
 	// Delta from an original address to the duplicate.
-	offset uintptr
+	writeOffset uintptr
 
 	Start, End uintptr
 
 	datap *moduledata
-
-	dupInfo *Info
-}
-
-func (s *Info) isDuplicate() bool {
-	// If offset is 0 there is no duplicate at all. And the duplicate field
-	// is only populated on the original.
-	return s.offset > 0 && s.dupInfo == nil
 }
 
 // Text returns the address of the beginning and end of the text segment.
@@ -70,27 +62,20 @@ func (s *Info) Text() (text uintptr, etext uintptr) {
 	return
 }
 
-func (s *Info) originalText() (text uintptr, etext uintptr) {
-	text, etext = s.Text()
-	if s.isDuplicate() {
-		negOffset := -s.offset
-		text += negOffset
-		etext += negOffset
-	}
-	return text, etext
-}
-
 // FuncSlice returns a slice containing the machine instructions for a function.
-func (s *Info) FuncSlice(fn any) ([]byte, error) {
+//
+// The returned uintptr is the address that the function executes from, which
+// differs from the slice data address on Darwin.
+func (s *Info) FuncSlice(fn any) ([]byte, uintptr, error) {
 	fnv := reflect.ValueOf(fn)
 	if fnv.Kind() != reflect.Func {
-		return nil, fmt.Errorf("not a function, kind: %v", fnv.Kind())
+		return nil, 0, fmt.Errorf("not a function, kind: %v", fnv.Kind())
 	}
 	entry := fnv.Pointer()
 
 	datap := findfunc(entry).datap
 	if datap == nil {
-		return nil, errors.New("no moduledata for function")
+		return nil, 0, errors.New("no moduledata for function")
 	}
 
 	text := datap.text
@@ -118,22 +103,20 @@ func (s *Info) FuncSlice(fn any) ([]byte, error) {
 		}
 	}
 
-	// If there's a duplicate, always return the address to its copy of the function.
-	if s.offset > 0 {
-		origText, origEtext := s.originalText()
-		if entry >= origText && entry < origEtext {
-			entry += s.offset
-		}
+	// If there's a writable version, use that instead of the executable one for slice.
+	writeOffset, err := s.getWriteOffset()
+	if err != nil {
+		return nil, 0, fmt.Errorf("unable to get writeOffset: %w", err)
 	}
 
-	return unsafe.Slice((*byte)(unsafe.Pointer(entry)), length), nil
+	return unsafe.Slice((*byte)(unsafe.Pointer(entry+writeOffset)), length), entry, nil
 }
 
 func (s *Info) String() string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "addr: 0x%x\n", uintptr(unsafe.Pointer(s)))
-	fmt.Fprintf(&b, "offset: 0x%x\n", s.offset)
+	fmt.Fprintf(&b, "writeOffset: 0x%x\n", s.writeOffset)
 	fmt.Fprintf(&b, "Start: 0x%x\n", s.Start)
 	fmt.Fprintf(&b, "End: 0x%x\n", s.End)
 	fmt.Fprintf(&b, "datap:\n")

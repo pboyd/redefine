@@ -3,11 +3,9 @@
 package redefine
 
 import (
-	"fmt"
 	"syscall"
 	"unsafe"
 
-	"github.com/pboyd/redefine/internal/cacheflush"
 	"golang.org/x/sys/windows"
 )
 
@@ -23,28 +21,6 @@ func makeRWX(buf []byte) error {
 
 func makeRX(buf []byte) error {
 	return mprotect(buf, mprotectRX)
-}
-
-func applyCodeCopy(dst, src []byte) error {
-	if err := makeRWX(dst); err != nil {
-		return err
-	}
-	defer makeRX(dst)
-	copy(dst[:len(src)], src)
-	cacheflush.Flush(dst)
-	return nil
-}
-
-func applyCodeJump(code []byte, dest uintptr) error {
-	if err := makeRWX(code); err != nil {
-		return fmt.Errorf("mprotect: %w", err)
-	}
-	defer makeRX(code)
-	if err := insertJump(code, dest); err != nil {
-		return err
-	}
-	cacheflush.Flush(code)
-	return nil
 }
 
 func mprotect(buf []byte, flags int) error {

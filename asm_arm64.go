@@ -53,12 +53,15 @@ const scratchRegister = 16
 const idealCloneDistance = 128 * 1024 * 1024
 const maxCloneDistance = 4 * 1024 * 1024 * 1024
 
-func insertJump(buf []byte, dest uintptr) error {
+func insertJump(buf []byte, srcAddr, dest uintptr) error {
 	if len(buf) < 4 {
 		return errors.New("buffer too small")
 	}
 
-	addr := int64(uintptr(unsafe.Pointer(unsafe.SliceData(buf))))
+	var addr = int64(srcAddr)
+	if addr == 0 {
+		addr = int64(uintptr(unsafe.Pointer(unsafe.SliceData(buf))))
+	}
 	offset := int64(dest) - addr
 
 	if offset < -(1<<27) || offset >= (1<<27) {
@@ -78,14 +81,18 @@ func insertJump(buf []byte, dest uintptr) error {
 // relocateFunc copies machine instructions from src into dest translating
 // relative instructions as it goes. dest must be at least as large as src.
 //
-// The data underlying the slices is assumed to be the same address the code
-// would execute from.
-func relocateFunc(src, dest []byte) ([]byte, error) {
+// srcAddr is the address the src instructions execute from. If zero, the
+// slice data address is used. On Darwin arm64 srcAddr differs from the slice
+// address because FuncSlice returns a writable-copy slice.
+func relocateFunc(src []byte, srcAddr uintptr, dest []byte) ([]byte, error) {
 	src = trimPadding(src)
 	dest = dest[:len(src)]
 	copy(dest, src)
 
-	srcPC := uintptr(unsafe.Pointer(unsafe.SliceData(src)))
+	srcPC := srcAddr
+	if srcPC == 0 {
+		srcPC = uintptr(unsafe.Pointer(unsafe.SliceData(src)))
+	}
 
 	for i := 0; i < len(src); i += 4 {
 		raw := dest[i : i+4]

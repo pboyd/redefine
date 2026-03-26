@@ -23,7 +23,7 @@ const (
 const idealCloneDistance = 0
 const maxCloneDistance = math.MaxInt32
 
-func insertJump(buf []byte, dest uintptr) error {
+func insertJump(buf []byte, _, dest uintptr) error {
 	const instructionSize = 5 // 1 byte opcode + 4 byte address
 
 	// Make sure the buffer has enough space. As far as I can tell, there
@@ -51,9 +51,10 @@ func insertJump(buf []byte, dest uintptr) error {
 // relocateFunc copies machine instructions from src into dest translating
 // relative instructions as it goes. dest must be at least as large as src.
 //
-// The data underlying the slices is assumed to be the same address the code
-// would execute from.
-func relocateFunc(src, dest []byte) ([]byte, error) {
+// srcAddr is the address the src instructions execute from. If zero, the
+// slice data address is used. On amd64 the slice address always equals the
+// execution address, so srcAddr is ignored.
+func relocateFunc(src []byte, _ uintptr, dest []byte) ([]byte, error) {
 	dest = dest[:len(src)]
 
 	for i := 0; i < len(src); {

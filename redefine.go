@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/pboyd/redefine/internal/cacheflush"
 	"github.com/pboyd/redefine/internal/static"
 )
 
@@ -145,7 +146,7 @@ func Restore[T any](fn T) error {
 		return fmt.Errorf("unknown function type: %T", cloned)
 	}
 
-	code, err := static.GetInfo().FuncSlice(fn)
+	code, _, err := static.GetInfo().FuncSlice(fn)
 	if err != nil {
 		return err
 	}
@@ -153,9 +154,14 @@ func Restore[T any](fn T) error {
 		return fmt.Errorf("func length mismatch %d != %d", len(code), len(clonedType.originalCode))
 	}
 
-	if err = applyCodeCopy(code, clonedType.originalCode); err != nil {
-		return fmt.Errorf("restore code: %w", err)
+	err = makeRWX(code)
+	if err != nil {
+		return err
 	}
+	defer makeRX(code)
+
+	copy(code, clonedType.originalCode)
+	cacheflush.Flush(code)
 
 	clonedType.Free()
 	delete(redefined, fnv.Pointer())
@@ -170,17 +176,11 @@ func unsafeFunc[T any](fn T, newFn any) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	err := static.Fork()
-	if err != nil {
-		return fmt.Errorf("failed to re-allocate program text segment: %w", err)
-	}
-
-	code, err := static.GetInfo().FuncSlice(fn)
+	code, addr, err := static.GetInfo().FuncSlice(fn)
 	if err != nil {
 		return err
 	}
 
-	addr := reflect.ValueOf(fn).Pointer()
 	if _, ok := redefined[addr]; !ok {
 		redefined[addr], err = cloneFunc(fn)
 		if err != nil {
@@ -189,5 +189,17 @@ func unsafeFunc[T any](fn T, newFn any) error {
 		}
 	}
 
-	return applyCodeJump(code, reflect.ValueOf(newFn).Pointer())
+	err = makeRWX(code)
+	if err != nil {
+		return fmt.Errorf("mprotect: %w", err)
+	}
+	defer makeRX(code)
+
+	err = insertJump(code, addr, reflect.ValueOf(newFn).Pointer())
+	if err != nil {
+		return err
+	}
+	cacheflush.Flush(code)
+
+	return nil
 }
