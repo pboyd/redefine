@@ -25,7 +25,7 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 		return nil, fmt.Errorf("not a function, kind: %v", fnv.Kind())
 	}
 
-	originalCode, err := static.GetInfo().FuncSlice(fn)
+	originalCode, execAddr, err := static.GetInfo().FuncSlice(fn)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 			return nil, err
 		}
 
-		newCode, err = relocateFunc(originalCode, newCode)
+		newCode, err = relocateFunc(originalCode, execAddr, newCode)
 		if err != nil {
 			cloneAllocator.Free(newCode)
 			newCode = nil
@@ -62,7 +62,7 @@ func cloneFunc[T any](fn T) (*clonedFunc[T], error) {
 		return nil, err
 	}
 	if newCode == nil {
-		// this probably never hits because there's an error, but just to be sure
+		// We probably never get here because newCode should only be nil on errors, but just to be safe.
 		return nil, errors.New("failed to allocate memory for cloned function")
 	}
 

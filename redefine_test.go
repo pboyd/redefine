@@ -19,9 +19,10 @@ func b() string {
 
 func TestFunc(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	assert.Equal("a", a())
-	assert.NoError(Func(a, b))
+	require.NoError(Func(a, b))
 	assert.Equal("b", a())
 
 	assert.Equal("a", Original(a)())
