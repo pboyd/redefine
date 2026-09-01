@@ -30,7 +30,7 @@ func TestRemap(t *testing.T) {
 		srcBuf[i] = byte(i)
 	}
 
-	dest, err := unix.MmapPtr(-1, 0, nil, pageSize, unix.PROT_NONE, unix.MAP_ANON|unix.MAP_PRIVATE|unix.MAP_JIT)
+	dest, err := unix.MmapPtr(-1, 0, nil, 2*pageSize, unix.PROT_NONE, unix.MAP_ANON|unix.MAP_PRIVATE|unix.MAP_JIT)
 	require.NoError(err)
 	defer unix.MunmapPtr(dest, 2*pageSize)
 
@@ -50,8 +50,8 @@ func TestRemap(t *testing.T) {
 
 	assert.Equal(remapAddr, uintptr(info.Addr))
 	assert.Equal(pageSize, info.Size)
-	assert.Equal(info.Prot, VmProtRead|VmProtWrite)
-	assert.Equal(info.MaxProt, VmProtRead|VmProtWrite|VmProtExecute)
+	assert.Equal(VmProtRead|VmProtWrite, info.Prot)
+	assert.Equal(VmProtRead|VmProtWrite|VmProtExecute, info.MaxProt)
 
 	destPage2 := info.Slice()
 	srcPage2 := srcBuf[pageSize:]

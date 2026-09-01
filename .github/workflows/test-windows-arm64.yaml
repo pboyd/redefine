@@ -13,8 +13,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        # Go 1.25 has a linker error.
-        go: ['1.26']
+        go: ['1.26', '1.27']
         host: ['windows-11-arm']
     env:
       # Use clang instead of defaulting to gcc
